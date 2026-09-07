@@ -50,7 +50,7 @@
       </div>
       <h2 class="text-lg font-bold text-slate-100">Pending Admin Approval</h2>
       <p class="text-xs text-slate-400 leading-relaxed">
-        သင့်အကောင့်ကို စာရင်းသွင်းပြီးပါပြီ။ သို့သော် လုံခြုံရေးအရ Workspace ထဲသို့ ဝင်ရောက်ရန် <strong class="text-indigo-400">Admin (aungkoko.cs@gmail.com) ၏ အတည်ပြုချက်</strong> လိုအပ်ပါသည်။
+        သင့်အကောင့်ကို စာရင်းသွင်းပြီးပါပြီ။ သို့သော် လုံခြုံရေးအရ Workspace ထဲသို့ ဝင်ရောက်ရန် <strong class="text-indigo-400">Admin (aungkoko.business@gmail.com) ၏ အတည်ပြုချက်</strong> လိုအပ်ပါသည်။
       </p>
       <div class="pt-2 border-t border-slate-800">
         <button onclick="handleSignOut()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-lg text-xs font-semibold transition">
@@ -375,7 +375,8 @@
     const dbRef = db.ref("project_hub_global_db");
     const usersRef = db.ref("project_hub_users");
 
-    const ADMIN_EMAIL = "aungkoko.cs@gmail.com";
+    // ပြင်ဆင်ပြီးသော Admin အကောင့်အသစ်
+    const ADMIN_EMAIL = "aungkoko.business@gmail.com";
 
     let currentUser = null;
     let authMode = 'login';
@@ -390,7 +391,6 @@
         document.getElementById("authScreen").classList.add("hidden");
         document.getElementById("userEmailBadge").innerText = user.email;
 
-        // Force register/update user in realtime database immediately
         const userEmailClean = user.email.toLowerCase().replace(/\./g, "_");
         const isSuperAdmin = user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
 
@@ -403,7 +403,6 @@
           }
         });
 
-        // Listen for user approval changes
         usersRef.on("value", snapshot => {
           usersList = snapshot.val() || {};
           const currentRecord = usersList[userEmailClean];
@@ -808,11 +807,11 @@
     function handleCreateRisk(e) { e.preventDefault(); getActiveProject().risks.push({ id: 'r-' + Date.now(), desc: document.getElementById('nrDesc').value, impact: document.getElementById('nrImpact').value, likelihood: document.getElementById('nrLikelihood').value, mitigation: document.getElementById('nrMitigation').value }); closeModal('riskModal'); saveToCloud(); }
     function renderRisks() { document.getElementById('riskTableBody').innerHTML = (getActiveProject()?.risks || []).map(r => `<tr class="text-xs hover:bg-slate-800/20"><td class="py-2.5 px-4">${r.desc}</td><td class="py-2.5 px-4 text-rose-400 font-bold">${r.impact}</td><td class="py-2.5 px-4">${r.mitigation||'-'}</td><td class="py-2.5 px-4 text-right"><button onclick="getActiveProject().risks = getActiveProject().risks.filter(x=>x.id!=='${r.id}');saveToCloud();" class="text-rose-400"><i class="fa-regular fa-trash-can"></i></button></td></tr>`).join('') || '<tr><td colspan="4" class="p-4 text-center text-slate-500">No risks.</td></tr>'; }
 
-    function handleCreateIssue(e) { e.preventDefault(); getActiveProject().issues.push({ id: 'i-' + Date.now(), desc: document.getElementById('niDesc').value, severity: document.getElementById('niSeverity').value, status: document.getElementById('niStatus').value, owner: document.getElementById('niOwner').value, notes: document.getElementById('niNotes').value }); closeModal('issueModal'); saveToCloud(); }
-    function renderIssues() { document.getElementById('issueTableBody').innerHTML = (getActiveProject()?.issues || []).map(i => `<tr class="text-xs hover:bg-slate-800/20"><td class="py-2.5 px-4">${i.desc}</td><td class="py-2.5 px-4 text-amber-400">${i.severity}</td><td class="py-2.5 px-4">${i.status}</td><td class="py-2.5 px-4">${i.owner||'-'}</td><td class="py-2.5 px-4 text-right"><button onclick="getActiveProject().issues = getActiveProject().issues.filter(x=>x.id!=='${i.id}');saveToCloud();" class="text-rose-400"><i class="fa-regular fa-trash-can"></i></button></td></tr>`).join('') || '<tr><td colspan="5" class="p-4 text-center text-slate-500">No issues.</td></tr>'; }
+    function handleCreateIssue(e) { e.preventDefault(); getActiveProject().issues.push({ id: 'iss-' + Date.now(), desc: document.getElementById('niDesc').value, severity: document.getElementById('niSeverity').value, status: document.getElementById('niStatus').value, owner: document.getElementById('niOwner').value, notes: document.getElementById('niNotes').value }); closeModal('issueModal'); saveToCloud(); }
+    function renderIssues() { document.getElementById('issueTableBody').innerHTML = (getActiveProject()?.issues || []).map(i => `<tr class="text-xs hover:bg-slate-800/20"><td class="py-2.5 px-4">${i.desc}</td><td class="py-2.5 px-4 text-amber-400">${i.severity}</td><td class="py-2.5 px-4"><select onchange="updateIssueStatus('${i.id}', this.value)" class="bg-slate-950 border border-slate-800 rounded px-2 py-1 text-xs"><option value="Open" ${i.status==='Open'?'selected':''}>Open</option><option value="Investigating" ${i.status==='Investigating'?'selected':''}>Investigating</option><option value="Resolved" ${i.status==='Resolved'?'selected':''}>Resolved</option></select></td><td class="py-2.5 px-4">${i.owner||'-'}</td><td class="py-2.5 px-4 text-right"><button onclick="getActiveProject().issues = getActiveProject().issues.filter(x=>x.id!=='${i.id}');saveToCloud();" class="text-rose-400"><i class="fa-regular fa-trash-can"></i></button></td></tr>`).join('') || '<tr><td colspan="5" class="p-4 text-center text-slate-500">No issues.</td></tr>'; }
 
     function saveAllocatedBudget() { getActiveProject().allocatedBudget = parseFloat(document.getElementById('budgetTotalInput').value) || 0; saveToCloud(); }
-    function addExpense(e) { e.preventDefault(); getActiveProject().expenses.push({ id: 'e-' + Date.now(), name: document.getElementById('expName').value, amount: parseFloat(document.getElementById('expAmount').value) || 0 }); document.getElementById('expName').value = ''; document.getElementById('expAmount').value = ''; saveToCloud(); }
+    function addExpense(e) { e.preventDefault(); getActiveProject().expenses.push({ id: 'exp-' + Date.now(), name: document.getElementById('expName').value, amount: parseFloat(document.getElementById('expAmount').value) || 0 }); document.getElementById('expName').value = ''; document.getElementById('expAmount').value = ''; saveToCloud(); }
     function renderBudget() {
       const p = getActiveProject();
       if (!p) return;
@@ -821,7 +820,9 @@
       document.getElementById('budget-allocated-view').innerText = `$${allocated.toLocaleString()}`;
       document.getElementById('budget-spent-view').innerText = `$${spent.toLocaleString()}`;
       document.getElementById('budget-remaining-view').innerText = `$${(allocated - spent).toLocaleString()}`;
-      document.getElementById('expenseTableBody').innerHTML = (p.expenses || []).map(e => `<tr class="text-xs"><td class="py-2 px-3">${e.name}</td><td class="py-2 px-3 font-mono text-amber-300">$${e.amount}</td><td class="py-2 px-3 text-right"><button onclick="getActiveProject().expenses = getActiveProject().expenses.filter(x=>x.id!=='${e.id}');saveToCloud();" class="text-rose-400"><i class="fa-solid fa-trash-can"></i></button></td></tr>`).join('');
+      document.getElementById('expenseTableBody').innerHTML = (p.expenses || []).map(e => `
+        <tr class="text-xs hover:bg-slate-800/20"><td class="py-2 px-3 text-slate-300">${e.name}</td><td class="py-2 px-3 font-mono text-amber-300">$${e.amount}</td><td class="py-2 px-3 text-right"><button onclick="getActiveProject().expenses = getActiveProject().expenses.filter(x=>x.id!=='${e.id}');saveToCloud();" class="text-slate-500 hover:text-rose-400"><i class="fa-solid fa-trash-can"></i></button></td></tr>
+      `).join('');
     }
 
     function switchProject(id) { activeProjectId = id; render(); }
