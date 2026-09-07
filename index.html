@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ProjectHub - Ultimate Admin & Approval Suite</title>
+  <title>ProjectHub - Ultimate Admin & Gantt Suite</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   
@@ -50,7 +50,7 @@
       </div>
       <h2 class="text-lg font-bold text-slate-100">Pending Admin Approval</h2>
       <p class="text-xs text-slate-400 leading-relaxed">
-        သင့်အကောင့်ကို စာရင်းသွင်းပြီးပါပြီ။ သို့သော် လုံခြုံရေးအရ Workspace ထဲသို့ ဝင်ရောက်ရန် <strong class="text-indigo-400">Admin ၏ အတည်ပြုချက်</strong> လိုအပ်ပါသည်။
+        သင့်အကောင့်ကို စာရင်းသွင်းပြီးပါပြီ။ သို့သော် လုံခြုံရေးအရ Workspace ထဲသို့ ဝင်ရောက်ရန် <strong class="text-indigo-400">Admin (aungkoko.business@gmail.com) ၏ အတည်ပြုချက်</strong> လိုအပ်ပါသည်။
       </p>
       <div class="pt-2 border-t border-slate-800">
         <button onclick="handleSignOut()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-lg text-xs font-semibold transition">
@@ -170,14 +170,21 @@
         <div id="chaptersGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
       </section>
 
-      <!-- 3. GANTT -->
+      <!-- 3. GANTT (RESTORED BEAUTIFUL TABLE & TIMELINE) -->
       <section id="view-gantt" class="space-y-4">
         <div class="bg-slate-900/70 border border-slate-800 rounded-xl p-5 space-y-4">
           <div class="flex flex-wrap justify-between items-center gap-3">
-            <div><h2 class="text-base font-bold text-slate-100 flex items-center gap-2"><i class="fa-solid fa-diagram-next text-indigo-400"></i> Dependency Timeline & Gantt Schedule</h2><p class="text-xs text-slate-400">Task အမှီအခိုများနှင့် timeline</p></div>
-            <button onclick="openAddTaskModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium"><i class="fa-solid fa-plus"></i> Add Task</button>
+            <div><h2 class="text-base font-bold text-slate-100 flex items-center gap-2"><i class="fa-solid fa-diagram-next text-indigo-400"></i> Dependency Timeline & Gantt Schedule</h2><p class="text-xs text-slate-400">Task ရှေ့နောက် အမှီအခိုများနှင့် ဇယားကွက်အချိန်ဇယား</p></div>
+            <div class="flex items-center gap-4 text-xs">
+              <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-rose-500/80 border border-rose-400 inline-block"></span> Blocked</span>
+              <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-blue-500 inline-block"></span> In Progress</span>
+              <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-emerald-500 inline-block"></span> Done</span>
+              <button onclick="openAddTaskModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium"><i class="fa-solid fa-plus"></i> Add Task</button>
+            </div>
           </div>
-          <div class="border border-slate-800 rounded-xl bg-slate-950 overflow-x-auto"><div id="gantt-chart-wrapper" class="min-w-[850px] p-4"></div></div>
+          <div class="border border-slate-800 rounded-xl bg-slate-950 overflow-x-auto">
+            <div id="gantt-chart-wrapper" class="min-w-[850px] p-4"></div>
+          </div>
         </div>
       </section>
 
@@ -251,7 +258,7 @@
     </main>
   </div>
 
-  <!-- ADMIN USERS APPROVAL MODAL -->
+  <!-- ADMIN USERS APPROVAL MODAL (WITH DENY OPTION) -->
   <div id="approvalModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
     <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 w-full max-w-lg shadow-2xl text-xs space-y-4">
       <div class="flex justify-between items-center border-b border-slate-800 pb-3">
@@ -375,7 +382,6 @@
     const dbRef = db.ref("project_hub_global_db");
     const usersRef = db.ref("project_hub_users");
 
-    // ပြင်ဆင်ပြီးသော Admin အကောင့်အသစ်
     const ADMIN_EMAIL = "aungkoko.business@gmail.com";
 
     let currentUser = null;
@@ -384,7 +390,7 @@
     let usersList = {};
     let activeProjectId = null;
 
-    // --- ROBUST AUTH GATEWAY WITH REALTIME USER SYNC ---
+    // --- ROBUST AUTH GATEWAY ---
     auth.onAuthStateChanged(user => {
       currentUser = user;
       if (user) {
@@ -454,7 +460,7 @@
       auth.signOut();
     }
 
-    // --- APPROVAL PANEL ---
+    // --- APPROVAL PANEL (WITH DENY BUTTON) ---
     function openApprovalModal() {
       renderApprovalTable();
       openModal("approvalModal");
@@ -471,22 +477,31 @@
 
       tbody.innerHTML = entries.map(([key, u]) => {
         const isApproved = u.status === 'approved';
+        const isDenied = u.status === 'denied';
         const isAdmin = u.email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+
+        let statusBadge = 'bg-rose-500/20 text-rose-300';
+        let statusText = 'Pending';
+        if (isApproved) { statusBadge = 'bg-emerald-500/20 text-emerald-300'; statusText = 'Approved'; }
+        else if (isDenied) { statusBadge = 'bg-amber-500/20 text-amber-300'; statusText = 'Denied'; }
 
         return `
           <tr class="hover:bg-slate-800/30 transition text-xs">
             <td class="py-2.5 px-3 text-slate-200 font-mono">${u.email} ${isAdmin ? '<span class="text-[9px] bg-amber-500/20 text-amber-300 px-1 rounded ml-1">Admin</span>' : ''}</td>
-            <td class="py-2.5 px-3"><span class="px-2 py-0.5 rounded text-[10px] font-semibold ${isApproved ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}">${isApproved ? 'Approved' : 'Pending'}</span></td>
-            <td class="py-2.5 px-3 text-right">
-              ${!isAdmin ? `<button onclick="toggleUserApproval('${key}', ${!isApproved})" class="px-2.5 py-1 rounded text-[11px] font-medium transition ${isApproved ? 'bg-slate-800 hover:bg-rose-900/40 text-rose-400' : 'bg-emerald-600 hover:bg-emerald-500 text-white'}">${isApproved ? 'Revoke' : 'Approve'}</button>` : '<span class="text-slate-600 text-[10px]">Admin</span>'}
+            <td class="py-2.5 px-3"><span class="px-2 py-0.5 rounded text-[10px] font-semibold ${statusBadge}">${statusText}</span></td>
+            <td class="py-2.5 px-3 text-right space-x-1">
+              ${!isAdmin ? `
+                ${!isApproved ? `<button onclick="setUserStatus('${key}', 'approved')" class="px-2.5 py-1 rounded text-[11px] font-medium bg-emerald-600 hover:bg-emerald-500 text-white transition">Approve</button>` : ''}
+                ${isApproved || statusText === 'Pending' ? `<button onclick="setUserStatus('${key}', 'denied')" class="px-2.5 py-1 rounded text-[11px] font-medium bg-rose-600/80 hover:bg-rose-600 text-white transition">Deny</button>` : ''}
+              ` : '<span class="text-slate-600 text-[10px]">Admin</span>'}
             </td>
           </tr>
         `;
       }).join('');
     }
 
-    function toggleUserApproval(key, approve) {
-      usersRef.child(key).update({ status: approve ? 'approved' : 'pending' }).then(() => {
+    function setUserStatus(key, status) {
+      usersRef.child(key).update({ status: status }).then(() => {
         renderApprovalTable();
         updatePendingBadge();
       });
@@ -772,18 +787,85 @@
       document.getElementById('count-done').innerText = counts.done;
     }
 
+    // --- RESTORED FULL GANTT TIMELINE TABLE ---
     function renderGantt() {
       const proj = getActiveProject();
       const container = document.getElementById('gantt-chart-wrapper');
-      if (!proj || !proj.tasks.length) { container.innerHTML = '<div class="text-center py-4 text-slate-500 text-xs">No tasks.</div>'; return; }
-      const dates = proj.tasks.flatMap(t => [new Date(t.startDate).getTime(), new Date(t.endDate).getTime()]);
-      const min = Math.min(...dates) - 86400000, max = Math.max(...dates) + 86400000 * 2, span = max - min;
-      container.innerHTML = proj.tasks.map(t => {
-        const left = Math.max(0, ((new Date(t.startDate).getTime() - min) / span) * 100);
-        const width = Math.max(2, ((new Date(t.endDate).getTime() - new Date(t.startDate).getTime() + 86400000) / span) * 100);
-        const color = t.status === 'done' ? 'bg-emerald-500 text-emerald-950' : 'bg-blue-500 text-blue-950';
-        return `<div class="flex items-center border-b border-slate-800/50 py-1 text-xs"><div class="w-60 truncate px-2 text-slate-300">${t.title}</div><div class="flex-1 relative h-5"><div onclick="openEditTaskModal('${t.id}')" class="cursor-pointer absolute top-1/2 -translate-y-1/2 h-4 rounded text-[9px] px-1 flex items-center truncate ${color}" style="left:${left}%; width:${width}%">${t.title}</div></div></div>`;
-      }).join('');
+      if (!proj || !proj.tasks || proj.tasks.length === 0) {
+        container.innerHTML = '<div class="text-center py-10 text-slate-500 text-xs">No tasks scheduled yet.</div>';
+        return;
+      }
+
+      const allDates = [];
+      proj.tasks.forEach(t => {
+        if (t.startDate) allDates.push(new Date(t.startDate).getTime());
+        if (t.endDate) allDates.push(new Date(t.endDate).getTime());
+      });
+
+      const today = new Date();
+      allDates.push(today.getTime());
+
+      const minTime = Math.min(...allDates) - (1 * 86400000);
+      const maxTime = Math.max(...allDates) + (2 * 86400000);
+      const totalSpan = maxTime - minTime;
+      const dayCount = Math.ceil(totalSpan / 86400000);
+
+      let headerDaysHtml = '';
+      for (let i = 0; i < dayCount; i++) {
+        const d = new Date(minTime + (i * 86400000));
+        const dayLabel = d.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' });
+        const isToday = d.toDateString() === today.toDateString();
+        headerDaysHtml += `<div class="flex-1 text-center py-2 text-[10px] font-mono border-r border-slate-800 ${isToday ? 'bg-indigo-950/40 text-indigo-300 font-bold' : 'text-slate-400'}">${dayLabel}</div>`;
+      }
+
+      let rowsHtml = '';
+      proj.tasks.forEach(task => {
+        const sTime = new Date(task.startDate).getTime();
+        const eTime = new Date(task.endDate).getTime();
+        const leftPct = Math.max(0, Math.min(100, ((sTime - minTime) / totalSpan) * 100));
+        const widthPct = Math.max(2, Math.min(100 - leftPct, ((eTime - sTime + 86400000) / totalSpan) * 100));
+
+        const { blocked, blockerName } = isTaskBlocked(task, proj);
+        const parentTask = task.dependsOn ? proj.tasks.find(t => t.id === task.dependsOn) : null;
+        const chapter = task.chapterId ? proj.chapters.find(c => c.id === task.chapterId) : null;
+        const chapterTheme = chapter ? getChapterColorClasses(chapter.color) : null;
+
+        let barColor = 'bg-slate-600 text-slate-200';
+        if (task.status === 'done') barColor = 'bg-emerald-500 text-emerald-950 font-bold';
+        else if (blocked) barColor = 'bg-rose-500/80 text-white border border-rose-400 border-dashed';
+        else if (task.status === 'inprogress') barColor = 'bg-blue-500 text-blue-950 font-bold';
+
+        rowsHtml += `
+          <div class="flex items-center border-b border-slate-800/60 hover:bg-slate-900/30 transition py-2 group">
+            <div class="w-80 shrink-0 px-3 text-xs flex flex-col gap-0.5">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-1.5 truncate max-w-[200px]">
+                  <span class="truncate font-medium ${blocked ? 'text-rose-300' : 'text-slate-200'}">${task.title}</span>
+                  ${task.desc ? `<i class="fa-regular fa-note-sticky text-[10px] text-slate-400" title="${task.desc}"></i>` : ''}
+                  <button onclick="openEditTaskModal('${task.id}')" class="text-slate-500 hover:text-indigo-400 transition ml-1"><i class="fa-solid fa-pen-to-square text-[11px]"></i></button>
+                </div>
+                <span class="text-[10px] px-1.5 py-0.2 rounded font-mono ${task.status === 'done' ? 'text-emerald-400 bg-emerald-500/10' : blocked ? 'text-rose-400 bg-rose-500/10' : task.status === 'inprogress' ? 'text-blue-400 bg-blue-500/10' : 'text-slate-400'}">${blocked ? 'BLOCKED' : task.status}</span>
+              </div>
+              <div class="text-[10px] flex items-center justify-between text-slate-400">
+                <div class="truncate max-w-[150px]">${chapter ? `<span class="px-1.5 py-0.2 rounded text-[9px] ${chapterTheme.bg} ${chapterTheme.text}"><i class="fa-solid fa-bookmark text-[8px] mr-0.5"></i>${chapter.name}</span>` : '<span class="text-slate-600 text-[9px]">General</span>'}</div>
+                ${parentTask ? `<span class="truncate text-[9px] ${blocked ? 'text-rose-400' : 'text-slate-500'}">Blocked by: ${parentTask.title}</span>` : ''}
+              </div>
+            </div>
+            <div class="flex-1 relative h-7">
+              <div onclick="openEditTaskModal('${task.id}')" class="cursor-pointer absolute top-1/2 -translate-y-1/2 h-5 rounded text-[10px] px-2 flex items-center justify-between shadow-md ${barColor}" style="left: ${leftPct}%; width: ${widthPct}%;" title="${task.title}">
+                <span class="truncate">${task.title}</span>
+                ${blocked ? '<i class="fa-solid fa-lock text-[10px] ml-1 shrink-0"></i>' : ''}
+              </div>
+            </div>
+          </div>
+        `;
+      });
+
+      const todayPct = Math.max(0, Math.min(100, ((today.getTime() - minTime) / totalSpan) * 100));
+      container.innerHTML = `
+        <div class="flex border-b border-slate-800 bg-slate-900 text-slate-300"><div class="w-80 shrink-0 px-3 py-2 text-xs font-bold border-r border-slate-800">Task Hierarchy & Chapter</div><div class="flex-1 flex relative">${headerDaysHtml}</div></div>
+        <div class="relative"><div class="absolute top-0 bottom-0 z-20 pointer-events-none" style="left: calc(20rem + (100% - 20rem) * ${todayPct / 100});"><div class="h-full border-r-2 border-rose-500/60 border-dashed"></div></div>${rowsHtml}</div>
+      `;
     }
 
     function renderCharter() {
@@ -805,10 +887,10 @@
     }
 
     function handleCreateRisk(e) { e.preventDefault(); getActiveProject().risks.push({ id: 'r-' + Date.now(), desc: document.getElementById('nrDesc').value, impact: document.getElementById('nrImpact').value, likelihood: document.getElementById('nrLikelihood').value, mitigation: document.getElementById('nrMitigation').value }); closeModal('riskModal'); saveToCloud(); }
-    function renderRisks() { document.getElementById('riskTableBody').innerHTML = (getActiveProject()?.risks || []).map(r => `<tr class="text-xs hover:bg-slate-800/20"><td class="py-2.5 px-4">${r.desc}</td><td class="py-2.5 px-4 text-rose-400 font-bold">${r.impact}</td><td class="py-2.5 px-4">${r.mitigation||'-'}</td><td class="py-2.5 px-4 text-right"><button onclick="getActiveProject().risks = getActiveProject().risks.filter(x=>x.id!=='${r.id}');saveToCloud();" class="text-rose-400"><i class="fa-regular fa-trash-can"></i></button></td></tr>`).join('') || '<tr><td colspan="4" class="p-4 text-center text-slate-500">No risks.</td></tr>'; }
+    function renderRisks() { document.getElementById('riskTableBody').innerHTML = (getActiveProject()?.risks || []).map(r => `<tr class="text-xs hover:bg-slate-800/20"><td class="py-2.5 px-4">${r.desc}</td><td class="py-2.5 px-4 text-rose-400 font-bold">${r.impact}</td><td class="py-2.5 px-4">${r.likelihood||'-'}</td><td class="py-2.5 px-4">${r.mitigation||'-'}</td><td class="py-2.5 px-4 text-right"><button onclick="getActiveProject().risks = getActiveProject().risks.filter(x=>x.id!=='${r.id}');saveToCloud();" class="text-rose-400"><i class="fa-regular fa-trash-can"></i></button></td></tr>`).join('') || '<tr><td colspan="5" class="p-4 text-center text-slate-500">No risks.</td></tr>'; }
 
     function handleCreateIssue(e) { e.preventDefault(); getActiveProject().issues.push({ id: 'iss-' + Date.now(), desc: document.getElementById('niDesc').value, severity: document.getElementById('niSeverity').value, status: document.getElementById('niStatus').value, owner: document.getElementById('niOwner').value, notes: document.getElementById('niNotes').value }); closeModal('issueModal'); saveToCloud(); }
-    function renderIssues() { document.getElementById('issueTableBody').innerHTML = (getActiveProject()?.issues || []).map(i => `<tr class="text-xs hover:bg-slate-800/20"><td class="py-2.5 px-4">${i.desc}</td><td class="py-2.5 px-4 text-amber-400">${i.severity}</td><td class="py-2.5 px-4"><select onchange="updateIssueStatus('${i.id}', this.value)" class="bg-slate-950 border border-slate-800 rounded px-2 py-1 text-xs"><option value="Open" ${i.status==='Open'?'selected':''}>Open</option><option value="Investigating" ${i.status==='Investigating'?'selected':''}>Investigating</option><option value="Resolved" ${i.status==='Resolved'?'selected':''}>Resolved</option></select></td><td class="py-2.5 px-4">${i.owner||'-'}</td><td class="py-2.5 px-4 text-right"><button onclick="getActiveProject().issues = getActiveProject().issues.filter(x=>x.id!=='${i.id}');saveToCloud();" class="text-rose-400"><i class="fa-regular fa-trash-can"></i></button></td></tr>`).join('') || '<tr><td colspan="5" class="p-4 text-center text-slate-500">No issues.</td></tr>'; }
+    function renderIssues() { document.getElementById('issueTableBody').innerHTML = (getActiveProject()?.issues || []).map(i => `<tr class="text-xs hover:bg-slate-800/20"><td class="py-2.5 px-4">${i.desc}</td><td class="py-2.5 px-4 text-amber-400">${i.severity}</td><td class="py-2.5 px-4"><select onchange="updateIssueStatus('${i.id}', this.value)" class="bg-slate-950 border border-slate-800 rounded px-2 py-1 text-xs"><option value="Open" ${i.status==='Open'?'selected':''}>Open</option><option value="Investigating" ${i.status==='Investigating'?'selected':''}>Investigating</option><option value="Resolved" ${i.status==='Resolved'?'selected':''}>Resolved</option></select></td><td class="py-2.5 px-4">${i.owner||'-'}</td><td class="py-2.5 px-4">${i.notes||'-'}</td><td class="py-2.5 px-4 text-right"><button onclick="getActiveProject().issues = getActiveProject().issues.filter(x=>x.id!=='${i.id}');saveToCloud();" class="text-rose-400"><i class="fa-regular fa-trash-can"></i></button></td></tr>`).join('') || '<tr><td colspan="6" class="p-4 text-center text-slate-500">No issues.</td></tr>'; }
 
     function saveAllocatedBudget() { getActiveProject().allocatedBudget = parseFloat(document.getElementById('budgetTotalInput').value) || 0; saveToCloud(); }
     function addExpense(e) { e.preventDefault(); getActiveProject().expenses.push({ id: 'exp-' + Date.now(), name: document.getElementById('expName').value, amount: parseFloat(document.getElementById('expAmount').value) || 0 }); document.getElementById('expName').value = ''; document.getElementById('expAmount').value = ''; saveToCloud(); }
@@ -820,9 +902,7 @@
       document.getElementById('budget-allocated-view').innerText = `$${allocated.toLocaleString()}`;
       document.getElementById('budget-spent-view').innerText = `$${spent.toLocaleString()}`;
       document.getElementById('budget-remaining-view').innerText = `$${(allocated - spent).toLocaleString()}`;
-      document.getElementById('expenseTableBody').innerHTML = (p.expenses || []).map(e => `
-        <tr class="text-xs hover:bg-slate-800/20"><td class="py-2 px-3 text-slate-300">${e.name}</td><td class="py-2 px-3 font-mono text-amber-300">$${e.amount}</td><td class="py-2 px-3 text-right"><button onclick="getActiveProject().expenses = getActiveProject().expenses.filter(x=>x.id!=='${e.id}');saveToCloud();" class="text-slate-500 hover:text-rose-400"><i class="fa-solid fa-trash-can"></i></button></td></tr>
-      `).join('');
+      document.getElementById('expenseTableBody').innerHTML = (p.expenses || []).map(e => `<tr class="text-xs hover:bg-slate-800/20"><td class="py-2 px-3 text-slate-300">${e.name}</td><td class="py-2 px-3 font-mono text-amber-300">$${e.amount}</td><td class="py-2 px-3 text-right"><button onclick="getActiveProject().expenses = getActiveProject().expenses.filter(x=>x.id!=='${e.id}');saveToCloud();" class="text-slate-500 hover:text-rose-400"><i class="fa-solid fa-trash-can"></i></button></td></tr>`).join('');
     }
 
     function switchProject(id) { activeProjectId = id; render(); }
