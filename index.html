@@ -14,7 +14,7 @@
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans">
 
-  <!-- AUTH SCREEN (IF NOT LOGGED IN) -->
+  <!-- AUTH SCREEN -->
   <div id="authScreen" class="fixed inset-0 bg-slate-950 flex items-center justify-center p-4 z-50">
     <div class="bg-slate-900 border border-slate-800 p-8 rounded-2xl w-full max-w-sm shadow-2xl space-y-5">
       <div class="text-center space-y-1">
@@ -42,7 +42,7 @@
     </div>
   </div>
 
-  <!-- APP CONTENT (SHOWN ONLY TO LOGGED IN USERS) -->
+  <!-- APP CONTAINER -->
   <div id="appContainer" class="hidden min-h-screen flex flex-col">
     <!-- Header -->
     <header class="bg-slate-900 border-b border-slate-800 px-6 py-3 flex flex-wrap justify-between items-center gap-4">
@@ -53,7 +53,6 @@
         </div>
         <div class="h-5 w-px bg-slate-800"></div>
         
-        <!-- Project Switcher & Actions -->
         <div class="flex items-center gap-2">
           <select id="projectSelect" onchange="switchProject(this.value)" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm font-medium text-slate-200 focus:outline-none focus:border-indigo-500"></select>
           
@@ -61,7 +60,6 @@
             <i class="fa-solid fa-folder-plus"></i> New Project
           </button>
 
-          <!-- Manage Project Members/Permissions -->
           <button onclick="openAccessModal()" title="Manage Permissions" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-2.5 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-1">
             <i class="fa-solid fa-user-shield text-indigo-400"></i> Access
           </button>
@@ -96,14 +94,14 @@
         <button onclick="switchTab('budget')" id="tab-budget" class="tab-btn px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-200 transition">Budget</button>
       </nav>
 
-      <!-- Backup -->
+      <!-- Backup Buttons -->
       <div class="flex gap-2">
-        <button onclick="exportData()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-2.5 py-1 rounded text-xs"><i class="fa-solid fa-download"></i></button>
-        <label class="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-2.5 py-1 rounded text-xs cursor-pointer"><i class="fa-solid fa-upload"></i><input type="file" onchange="importData(event)" class="hidden" accept=".json" /></label>
+        <button onclick="exportData()" title="Export JSON" class="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-2.5 py-1 rounded text-xs"><i class="fa-solid fa-download"></i></button>
+        <label title="Import JSON" class="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-2.5 py-1 rounded text-xs cursor-pointer"><i class="fa-solid fa-upload"></i><input id="importFileInput" type="file" onchange="importData(event)" class="hidden" accept=".json" /></label>
       </div>
     </div>
 
-    <!-- Main Container -->
+    <!-- Main Content -->
     <main class="flex-1 p-6 max-w-7xl mx-auto w-full">
       <!-- 1. CHARTER -->
       <section id="view-charter" class="hidden space-y-4">
@@ -177,7 +175,7 @@
     </main>
   </div>
 
-  <!-- ACCESS CONTROL MODAL (PERMISSIONS) -->
+  <!-- ACCESS CONTROL MODAL -->
   <div id="accessModal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
     <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 w-full max-w-md shadow-2xl text-xs space-y-4">
       <div class="flex justify-between items-center">
@@ -207,7 +205,7 @@
     </div>
   </div>
 
-  <!-- COMMON MODALS -->
+  <!-- OTHER MODALS -->
   <div id="newProjectModal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
     <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 w-full max-w-sm text-xs space-y-3">
       <h3 class="text-sm font-bold text-slate-100">Create New Project</h3>
@@ -297,7 +295,7 @@
     let globalStore = { projects: [] };
     let activeProjectId = null;
 
-    // --- AUTH LOGIC ---
+    // --- AUTH LISTENER ---
     auth.onAuthStateChanged(user => {
       currentUser = user;
       if (user) {
@@ -327,22 +325,22 @@
       auth.signOut();
     }
 
-    // --- CLOUD REALTIME LISTENER ---
+    // --- DATABASE LISTENER ---
     function attachDatabaseListener() {
       dbRef.on("value", snapshot => {
         const val = snapshot.val();
         if (val && Array.isArray(val.projects)) {
           globalStore = val;
         } else {
-          // Initialize first project if empty
+          // Initialize if empty
           const initialProject = {
             id: 'p-' + Date.now(),
-            name: 'Workspace Alpha',
+            name: 'My Workspace',
             owner: currentUser.email,
             collaborators: [],
             allocatedBudget: 1000,
             charter: {},
-            chapters: [{ id: 'ch-1', name: 'Phase 1', color: 'indigo', desc: 'Kickoff' }],
+            chapters: [{ id: 'ch-1', name: 'Phase 1: Setup', color: 'indigo', desc: 'Kickoff' }],
             tasks: [],
             risks: [],
             issues: [],
@@ -359,8 +357,7 @@
       dbRef.set(globalStore);
     }
 
-    // --- PERMISSION-BASED FILTERING ---
-    // User မြင်ခွင့်ရှိသော Project များကိုသာ စစ်ထုတ်ခြင်း
+    // --- PERMISSION FILTERING ---
     function getPermittedProjects() {
       if (!currentUser) return [];
       const userEmail = currentUser.email.toLowerCase();
@@ -391,7 +388,7 @@
       return proj;
     }
 
-    // --- ACCESS CONTROL MANAGEMENT ---
+    // --- ACCESS MODAL ---
     function openAccessModal() {
       const proj = getActiveProject();
       if (!proj) return;
@@ -465,8 +462,8 @@
       const newProj = {
         id: 'p-' + Date.now(),
         name,
-        owner: currentUser.email, // လက်ရှိ user ကို Owner သတ်မှတ်သည်
-        collaborators: [],        // စတင်ချိန်တွင် မည်သူမျှ မရှိသေးပါ
+        owner: currentUser.email,
+        collaborators: [],
         allocatedBudget: budget,
         charter: {},
         chapters: [{ id: 'ch-' + Date.now(), name: 'Phase 1: Setup', color: 'indigo', desc: 'Kickoff' }],
@@ -497,6 +494,67 @@
 
       globalStore.projects = globalStore.projects.filter(p => p.id !== proj.id);
       saveToCloud();
+    }
+
+    // --- EXPORT & IMPROVED IMPORT (AUTO-OWNER ASSIGNMENT) ---
+    function exportData() {
+      const a = document.createElement('a');
+      a.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(globalStore, null, 2));
+      a.download = `projecthub_backup.json`;
+      a.click();
+    }
+
+    function importData(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const r = new FileReader();
+      r.onload = ev => {
+        try {
+          const parsed = JSON.parse(ev.target.result);
+          let incomingProjects = [];
+
+          if (parsed && Array.isArray(parsed.projects)) {
+            incomingProjects = parsed.projects;
+          } else if (Array.isArray(parsed)) {
+            incomingProjects = parsed;
+          } else if (parsed && parsed.id && parsed.name) {
+            incomingProjects = [parsed];
+          }
+
+          if (incomingProjects.length > 0) {
+            const userEmail = currentUser.email;
+
+            // Owner မပါသော project များကို လက်ရှိ Login ဝင်ထားသူ၏ Owner အဖြစ် တန်းသတ်မှတ်ပေးခြင်း
+            incomingProjects.forEach(p => {
+              if (!p.owner) {
+                p.owner = userEmail;
+              }
+              if (!p.collaborators) p.collaborators = [];
+            });
+
+            // ရှိပြီးသား project များနှင့် ပေါင်းစပ်ထည့်သွင်းခြင်း
+            incomingProjects.forEach(newP => {
+              const idx = globalStore.projects.findIndex(x => x.id === newP.id);
+              if (idx >= 0) {
+                globalStore.projects[idx] = newP;
+              } else {
+                globalStore.projects.push(newP);
+              }
+            });
+
+            activeProjectId = incomingProjects[0].id;
+            saveToCloud();
+            alert("JSON Data များကို သင့်အကောင့်ထဲသို့ အောင်မြင်စွာ သွင်းပြီးပါပြီ။");
+          } else {
+            alert("မှားယွင်းနေသော JSON format ဖြစ်ပါသည်။");
+          }
+        } catch (err) {
+          alert("JSON ဖတ်မရပါ: " + err.message);
+        }
+        e.target.value = ''; // Reset file input
+      };
+      r.readAsText(file);
     }
 
     // --- CHAPTERS, TASKS & GANTT ENGINE ---
@@ -539,7 +597,7 @@
     function renderChapters() {
       const proj = getActiveProject();
       if (!proj) return;
-      document.getElementById('chaptersGrid').innerHTML = proj.chapters.map(ch => {
+      document.getElementById('chaptersGrid').innerHTML = (proj.chapters || []).map(ch => {
         const theme = getChapterColorClasses(ch.color);
         return `
           <div class="bg-slate-900 border ${theme.border} rounded-xl p-4 space-y-2">
@@ -558,8 +616,8 @@
       document.getElementById('ntStartDate').value = '';
       document.getElementById('ntEndDate').value = '';
       
-      document.getElementById('ntChapter').innerHTML = '<option value="">General</option>' + proj.chapters.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-      document.getElementById('ntDependency').innerHTML = '<option value="">None</option>' + proj.tasks.map(t => `<option value="${t.id}">${t.title}</option>`).join('');
+      document.getElementById('ntChapter').innerHTML = '<option value="">General</option>' + (proj.chapters || []).map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+      document.getElementById('ntDependency').innerHTML = '<option value="">None</option>' + (proj.tasks || []).map(t => `<option value="${t.id}">${t.title}</option>`).join('');
       openModal('taskModal');
     }
 
@@ -598,7 +656,7 @@
       const cols = { todo: document.getElementById('tasks-todo'), inprogress: document.getElementById('tasks-inprogress'), done: document.getElementById('tasks-done') };
       Object.values(cols).forEach(c => c.innerHTML = '');
 
-      const filtered = filter === 'all' || !filter ? proj.tasks : proj.tasks.filter(t => t.chapterId === filter);
+      const filtered = filter === 'all' || !filter ? (proj.tasks || []) : proj.tasks.filter(t => t.chapterId === filter);
 
       filtered.forEach(t => {
         const card = document.createElement('div');
@@ -621,7 +679,7 @@
 
     function renderGantt() {
       const proj = getActiveProject();
-      if (!proj || proj.tasks.length === 0) {
+      if (!proj || !proj.tasks || proj.tasks.length === 0) {
         document.getElementById('gantt-chart-wrapper').innerHTML = '<div class="text-center text-slate-500 text-xs py-4">No tasks scheduled</div>';
         return;
       }
@@ -677,7 +735,7 @@
     }
     function renderRisks() {
       const proj = getActiveProject();
-      document.getElementById('riskTableBody').innerHTML = (proj ? proj.risks : []).map(r => `
+      document.getElementById('riskTableBody').innerHTML = (proj ? (proj.risks || []) : []).map(r => `
         <tr class="text-xs hover:bg-slate-800/20"><td class="py-2 px-3">${r.desc}</td><td class="py-2 px-3 text-rose-400 font-bold">${r.impact}</td><td class="py-2 px-3 text-slate-400">${r.mitigation || '-'}</td></tr>
       `).join('');
     }
@@ -690,7 +748,7 @@
     }
     function renderIssues() {
       const proj = getActiveProject();
-      document.getElementById('issueTableBody').innerHTML = (proj ? proj.issues : []).map(i => `
+      document.getElementById('issueTableBody').innerHTML = (proj ? (proj.issues || []) : []).map(i => `
         <tr class="text-xs hover:bg-slate-800/20"><td class="py-2 px-3">${i.desc}</td><td class="py-2 px-3 text-amber-400">${i.severity}</td><td class="py-2 px-3">${i.status}</td></tr>
       `).join('');
     }
@@ -708,11 +766,11 @@
     function renderBudget() {
       const p = getActiveProject();
       if (!p) return;
-      const spent = p.expenses.reduce((a, b) => a + Number(b.amount), 0);
+      const spent = (p.expenses || []).reduce((a, b) => a + Number(b.amount), 0);
       document.getElementById('budgetTotalInput').value = p.allocatedBudget || 0;
       document.getElementById('budget-spent-view').innerText = `$${spent}`;
       document.getElementById('budget-remaining-view').innerText = `$${(p.allocatedBudget || 0) - spent}`;
-      document.getElementById('expenseTableBody').innerHTML = p.expenses.map(e => `<tr class="text-xs"><td class="py-1 px-2">${e.name}</td><td class="py-1 px-2 font-mono text-amber-400">$${e.amount}</td></tr>`).join('');
+      document.getElementById('expenseTableBody').innerHTML = (p.expenses || []).map(e => `<tr class="text-xs"><td class="py-1 px-2">${e.name}</td><td class="py-1 px-2 font-mono text-amber-400">$${e.amount}</td></tr>`).join('');
     }
 
     function switchProject(id) { activeProjectId = id; render(); }
@@ -730,20 +788,6 @@
       render();
     }
 
-    function exportData() {
-      const a = document.createElement('a');
-      a.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(globalStore));
-      a.download = `projecthub_db.json`;
-      a.click();
-    }
-    function importData(e) {
-      const file = e.target.files[0];
-      if (!file) return;
-      const r = new FileReader();
-      r.onload = ev => { globalStore = JSON.parse(ev.target.result); saveToCloud(); };
-      r.readAsText(file);
-    }
-
     // --- MAIN RENDER ---
     function render() {
       if (!currentUser) return;
@@ -754,7 +798,7 @@
       if (permitted.length === 0) {
         select.innerHTML = '<option value="">No Projects Assigned</option>';
       } else {
-        select.innerHTML = permitted.map(p => `<option value="${p.id}" ${proj && p.id === proj.id ? 'selected' : ''}>${p.name} (${p.owner.split('@')[0]})</option>`).join('');
+        select.innerHTML = permitted.map(p => `<option value="${p.id}" ${proj && p.id === proj.id ? 'selected' : ''}>${p.name} (${(p.owner || '').split('@')[0]})</option>`).join('');
       }
 
       if (proj) {
@@ -762,7 +806,7 @@
         document.getElementById('roleBadge').innerText = isOwner ? 'Project Owner' : 'Collaborator (Read/Write)';
         document.getElementById('roleBadge').className = isOwner ? 'text-[10px] text-emerald-400 font-mono' : 'text-[10px] text-amber-400 font-mono';
 
-        document.getElementById('kanbanChapterFilter').innerHTML = '<option value="all">All Chapters</option>' + proj.chapters.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+        document.getElementById('kanbanChapterFilter').innerHTML = '<option value="all">All Chapters</option>' + (proj.chapters || []).map(c => `<option value="${c.id}">${c.name}</option>`).join('');
 
         renderCharter();
         renderChapters();
