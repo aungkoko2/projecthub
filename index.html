@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ProjectHub - Ultimate Admin & Gantt Suite</title>
+  <title>ProjectHub - Ultimate Admin & Approval Suite</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   
@@ -170,7 +170,7 @@
         <div id="chaptersGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
       </section>
 
-      <!-- 3. GANTT (RESTORED BEAUTIFUL TABLE & TIMELINE) -->
+      <!-- 3. GANTT -->
       <section id="view-gantt" class="space-y-4">
         <div class="bg-slate-900/70 border border-slate-800 rounded-xl p-5 space-y-4">
           <div class="flex flex-wrap justify-between items-center gap-3">
@@ -182,9 +182,7 @@
               <button onclick="openAddTaskModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium"><i class="fa-solid fa-plus"></i> Add Task</button>
             </div>
           </div>
-          <div class="border border-slate-800 rounded-xl bg-slate-950 overflow-x-auto">
-            <div id="gantt-chart-wrapper" class="min-w-[850px] p-4"></div>
-          </div>
+          <div class="border border-slate-800 rounded-xl bg-slate-950 overflow-x-auto"><div id="gantt-chart-wrapper" class="min-w-[850px] p-4"></div></div>
         </div>
       </section>
 
@@ -258,7 +256,7 @@
     </main>
   </div>
 
-  <!-- ADMIN USERS APPROVAL MODAL (WITH DENY OPTION) -->
+  <!-- ADMIN USERS APPROVAL MODAL (WITH DELETE & APPROVE/DENY) -->
   <div id="approvalModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
     <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 w-full max-w-lg shadow-2xl text-xs space-y-4">
       <div class="flex justify-between items-center border-b border-slate-800 pb-3">
@@ -390,7 +388,7 @@
     let usersList = {};
     let activeProjectId = null;
 
-    // --- ROBUST AUTH GATEWAY ---
+    // --- AUTH GATEWAY ---
     auth.onAuthStateChanged(user => {
       currentUser = user;
       if (user) {
@@ -460,7 +458,7 @@
       auth.signOut();
     }
 
-    // --- APPROVAL PANEL (WITH DENY BUTTON) ---
+    // --- APPROVAL PANEL (WITH APPROVE, DENY & DELETE BUTTONS) ---
     function openApprovalModal() {
       renderApprovalTable();
       openModal("approvalModal");
@@ -491,8 +489,9 @@
             <td class="py-2.5 px-3"><span class="px-2 py-0.5 rounded text-[10px] font-semibold ${statusBadge}">${statusText}</span></td>
             <td class="py-2.5 px-3 text-right space-x-1">
               ${!isAdmin ? `
-                ${!isApproved ? `<button onclick="setUserStatus('${key}', 'approved')" class="px-2.5 py-1 rounded text-[11px] font-medium bg-emerald-600 hover:bg-emerald-500 text-white transition">Approve</button>` : ''}
-                ${isApproved || statusText === 'Pending' ? `<button onclick="setUserStatus('${key}', 'denied')" class="px-2.5 py-1 rounded text-[11px] font-medium bg-rose-600/80 hover:bg-rose-600 text-white transition">Deny</button>` : ''}
+                ${!isApproved ? `<button onclick="setUserStatus('${key}', 'approved')" class="px-2 py-1 rounded text-[11px] font-medium bg-emerald-600 hover:bg-emerald-500 text-white transition">Approve</button>` : ''}
+                ${isApproved || statusText === 'Pending' ? `<button onclick="setUserStatus('${key}', 'denied')" class="px-2 py-1 rounded text-[11px] font-medium bg-amber-600 hover:bg-amber-500 text-white transition">Deny</button>` : ''}
+                <button onclick="deleteUserRecord('${key}', '${u.email}')" title="Delete User" class="px-2 py-1 rounded text-[11px] font-medium bg-rose-600 hover:bg-rose-500 text-white transition"><i class="fa-solid fa-xmark"></i></button>
               ` : '<span class="text-slate-600 text-[10px]">Admin</span>'}
             </td>
           </tr>
@@ -502,6 +501,14 @@
 
     function setUserStatus(key, status) {
       usersRef.child(key).update({ status: status }).then(() => {
+        renderApprovalTable();
+        updatePendingBadge();
+      });
+    }
+
+    function deleteUserRecord(key, email) {
+      if (!confirm(`"${email}" အကောင့်ကို အပြီးတိုင် ဖျက်ပစ်မည်လား? (နောက်တစ်ကြိမ် ဝင်လျှင် အသစ်ပြန်လျှောက်ရပါမည်)`)) return;
+      usersRef.child(key).remove().then(() => {
         renderApprovalTable();
         updatePendingBadge();
       });
@@ -787,7 +794,6 @@
       document.getElementById('count-done').innerText = counts.done;
     }
 
-    // --- RESTORED FULL GANTT TIMELINE TABLE ---
     function renderGantt() {
       const proj = getActiveProject();
       const container = document.getElementById('gantt-chart-wrapper');
