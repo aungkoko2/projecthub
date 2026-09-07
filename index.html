@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ProjectHub - Ultimate Admin & Approval Suite</title>
+  <title>ProjectHub - Ultimate Admin & Project Switcher Fix</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   
@@ -50,7 +50,7 @@
       </div>
       <h2 class="text-lg font-bold text-slate-100">Pending Admin Approval</h2>
       <p class="text-xs text-slate-400 leading-relaxed">
-        သင့်အကောင့်ကို စာရင်းသွင်းပြီးပါပြီ။ သို့သော် လုံခြုံရေးအရ Workspace ထဲသို့ ဝင်ရောက်ရန် <strong class="text-indigo-400">Admin ၏ အတည်ပြုချက်</strong> လိုအပ်ပါသည်။
+        သင့်အကောင့်ကို စာရင်းသွင်းပြီးပါပြီ။ သို့သော် လုံခြုံရေးအရ Workspace ထဲသို့ ဝင်ရောက်ရန် <strong class="text-indigo-400">Admin (aungkoko.business@gmail.com) ၏ အတည်ပြုချက်</strong> လိုအပ်ပါသည်။
       </p>
       <div class="pt-2 border-t border-slate-800">
         <button onclick="handleSignOut()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-lg text-xs font-semibold transition">
@@ -82,7 +82,7 @@
             <i class="fa-solid fa-user-shield text-indigo-400"></i> Access
           </button>
 
-          <!-- Admin Approval Button (Visible only to Admin) -->
+          <!-- Admin Approval Button -->
           <button id="adminApprovalBtn" onclick="openApprovalModal()" class="hidden bg-amber-600 hover:bg-amber-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-1.5 shadow">
             <i class="fa-solid fa-users-gear"></i> Users Approval <span id="pendingBadge" class="hidden bg-rose-600 text-white text-[9px] px-1.5 py-0.2 rounded-full font-bold">0</span>
           </button>
@@ -256,7 +256,7 @@
     </main>
   </div>
 
-  <!-- ADMIN USERS APPROVAL MODAL (WITH DELETE & APPROVE/DENY) -->
+  <!-- ADMIN USERS APPROVAL MODAL -->
   <div id="approvalModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
     <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 w-full max-w-lg shadow-2xl text-xs space-y-4">
       <div class="flex justify-between items-center border-b border-slate-800 pb-3">
@@ -458,7 +458,7 @@
       auth.signOut();
     }
 
-    // --- APPROVAL PANEL (WITH APPROVE, DENY & DELETE BUTTONS) ---
+    // --- APPROVAL PANEL ---
     function openApprovalModal() {
       renderApprovalTable();
       openModal("approvalModal");
@@ -507,7 +507,7 @@
     }
 
     function deleteUserRecord(key, email) {
-      if (!confirm(`"${email}" အကောင့်ကို အပြီးတိုင် ဖျက်ပစ်မည်လား? (နောက်တစ်ကြိမ် ဝင်လျှင် အသစ်ပြန်လျှောက်ရပါမည်)`)) return;
+      if (!confirm(`"${email}" အကောင့်ကို အပြီးတိုင် ဖျက်ပစ်မည်လား?`)) return;
       usersRef.child(key).remove().then(() => {
         renderApprovalTable();
         updatePendingBadge();
@@ -550,8 +550,14 @@
     function getActiveProject() {
       const permitted = getPermittedProjects();
       if (permitted.length === 0) return null;
-      let proj = permitted.find(p => p.id === activeProjectId) || permitted[0];
-      activeProjectId = proj.id;
+      
+      // Fix: Check if activeProjectId exists within permitted list, otherwise pick the first one
+      let proj = permitted.find(p => p.id === activeProjectId);
+      if (!proj) {
+        proj = permitted[0];
+        activeProjectId = proj.id;
+      }
+
       if (!proj.chapters) proj.chapters = [];
       if (!proj.tasks) proj.tasks = [];
       if (!proj.charter) proj.charter = {};
@@ -619,6 +625,7 @@
       if (!proj || proj.owner.toLowerCase() !== currentUser.email.toLowerCase()) { alert("Ownerသာ ဖျက်ခွင့်ရှိသည်။"); return; }
       if (!confirm("Delete project?")) return;
       globalStore.projects = globalStore.projects.filter(p => p.id !== proj.id);
+      activeProjectId = null; // Reset active to trigger fallback to first available
       saveToCloud();
     }
 
@@ -911,7 +918,12 @@
       document.getElementById('expenseTableBody').innerHTML = (p.expenses || []).map(e => `<tr class="text-xs hover:bg-slate-800/20"><td class="py-2 px-3 text-slate-300">${e.name}</td><td class="py-2 px-3 font-mono text-amber-300">$${e.amount}</td><td class="py-2 px-3 text-right"><button onclick="getActiveProject().expenses = getActiveProject().expenses.filter(x=>x.id!=='${e.id}');saveToCloud();" class="text-slate-500 hover:text-rose-400"><i class="fa-solid fa-trash-can"></i></button></td></tr>`).join('');
     }
 
-    function switchProject(id) { activeProjectId = id; render(); }
+    // Fix: Switch project state correctly
+    function switchProject(id) {
+      activeProjectId = id;
+      render();
+    }
+
     function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
     function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
     function switchTab(tabId) {
@@ -935,9 +947,17 @@
       const permitted = getPermittedProjects();
       const proj = getActiveProject();
       const select = document.getElementById('projectSelect');
-      select.innerHTML = permitted.map(p => `<option value="${p.id}" ${proj && p.id === p.id ? 'selected' : ''}>${p.name}</option>`).join('') || '<option>No Projects</option>';
+      
+      select.innerHTML = permitted.map(p => `<option value="${p.id}" ${proj && p.id === proj.id ? 'selected' : ''}>${p.name}</option>`).join('') || '<option>No Projects</option>';
+      
       if (proj) {
-        renderCharter(); renderChapters(); renderTasks(); renderGantt(); renderRisks(); renderIssues(); renderBudget();
+        renderCharter(); 
+        renderChapters(); 
+        renderTasks(); 
+        renderGantt(); 
+        renderRisks(); 
+        renderIssues(); 
+        renderBudget();
       }
     }
   </script>
