@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ProjectHub - Ultimate Admin & Project Switcher Fix</title>
+  <title>ProjectHub - Ultimate Admin & Access Fix</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   
@@ -50,7 +50,7 @@
       </div>
       <h2 class="text-lg font-bold text-slate-100">Pending Admin Approval</h2>
       <p class="text-xs text-slate-400 leading-relaxed">
-        သင့်အကောင့်ကို စာရင်းသွင်းပြီးပါပြီ။ သို့သော် လုံခြုံရေးအရ Workspace ထဲသို့ ဝင်ရောက်ရန် <strong class="text-indigo-400">Admin ၏ အတည်ပြုချက်</strong> လိုအပ်ပါသည်။
+        သင့်အကောင့်ကို စာရင်းသွင်းပြီးပါပြီ။ သို့သော် လုံခြုံရေးအရ Workspace ထဲသို့ ဝင်ရောက်ရန် <strong class="text-indigo-400">Admin (aungkoko.business@gmail.com) ၏ အတည်ပြုချက်</strong> လိုအပ်ပါသည်။
       </p>
       <div class="pt-2 border-t border-slate-800">
         <button onclick="handleSignOut()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-lg text-xs font-semibold transition">
@@ -174,7 +174,7 @@
       <section id="view-gantt" class="space-y-4">
         <div class="bg-slate-900/70 border border-slate-800 rounded-xl p-5 space-y-4">
           <div class="flex flex-wrap justify-between items-center gap-3">
-            <div><h2 class="text-base font-bold text-slate-100 flex items-center gap-2"><i class="fa-solid fa-diagram-next text-indigo-400"></i> Dependency Timeline & Gantt Schedule</h2><p class="text-xs text-slate-400">Task ရှေ့နောက် အမှီအခိုများနှင့် ဇယားကွက်အချိန်ဇယား</p></div>
+            <div><h2 class="text-base font-bold text-slate-100 flex items-center gap-2"><i class="fa-solid fa-diagram-next text-indigo-400"></i> Dependency Timeline & Gantt Schedule</h2><p class="text-xs text-slate-400">Task အမှီအခိုများနှင့် ဇယားကွက်အချိန်ဇယား</p></div>
             <div class="flex items-center gap-4 text-xs">
               <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-rose-500/80 border border-rose-400 inline-block"></span> Blocked</span>
               <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-blue-500 inline-block"></span> In Progress</span>
@@ -276,13 +276,24 @@
     </div>
   </div>
 
-  <!-- ACCESS MODAL -->
+  <!-- ACCESS MODAL (FIXED ADD MEMBER LOGIC) -->
   <div id="accessModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
     <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 w-full max-w-md shadow-2xl text-xs space-y-4">
       <div class="flex justify-between items-center"><h3 class="text-base font-bold text-slate-100">Project Permissions</h3><button onclick="closeModal('accessModal')" class="text-slate-500 hover:text-slate-300"><i class="fa-solid fa-xmark"></i></button></div>
       <div class="bg-slate-950 p-3 rounded-lg border border-slate-800"><span class="text-slate-400">Owner:</span> <div id="accessModalOwner" class="font-mono text-indigo-300 font-semibold truncate"></div></div>
-      <form onsubmit="handleAddCollaborator(event)" class="flex gap-2"><input id="newCollabEmail" type="email" required placeholder="colleague@domain.com" class="flex-1 bg-slate-950 border border-slate-700 rounded p-2 text-white" /><button type="submit" class="bg-indigo-600 text-white px-3 py-2 rounded">Add</button></form>
-      <div id="collaboratorsList" class="space-y-1.5 max-h-40 overflow-y-auto"></div>
+      
+      <form onsubmit="handleAddCollaborator(event)" class="space-y-2">
+        <label class="block text-slate-300">Grant Access to Collaborator (Email)</label>
+        <div class="flex gap-2">
+          <input id="newCollabEmail" type="email" required placeholder="colleague@domain.com" class="flex-1 bg-slate-950 border border-slate-700 rounded p-2 text-white" />
+          <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-2 rounded">Add</button>
+        </div>
+      </form>
+
+      <div>
+        <label class="block text-slate-400 mb-1">Authorized Members:</label>
+        <div id="collaboratorsList" class="space-y-1.5 max-h-40 overflow-y-auto"></div>
+      </div>
     </div>
   </div>
 
@@ -550,14 +561,13 @@
     function getActiveProject() {
       const permitted = getPermittedProjects();
       if (permitted.length === 0) return null;
-      
-      // Fix: Check if activeProjectId exists within permitted list, otherwise pick the first one
       let proj = permitted.find(p => p.id === activeProjectId);
       if (!proj) {
         proj = permitted[0];
         activeProjectId = proj.id;
       }
 
+      if (!proj.collaborators) proj.collaborators = [];
       if (!proj.chapters) proj.chapters = [];
       if (!proj.tasks) proj.tasks = [];
       if (!proj.charter) proj.charter = {};
@@ -585,27 +595,58 @@
         return;
       }
       document.getElementById("accessModalOwner").innerText = proj.owner;
-      document.getElementById("collaboratorsList").innerHTML = (proj.collaborators || []).map(e => `<div class="flex justify-between items-center bg-slate-950 px-3 py-1.5 rounded"><span>${e}</span><button onclick="handleRemoveCollaborator('${e}')" class="text-rose-400"><i class="fa-solid fa-xmark"></i></button></div>`).join('') || '<div class="text-slate-500 italic">No members.</div>';
+      renderCollaboratorsList();
       openModal("accessModal");
+    }
+
+    function renderCollaboratorsList() {
+      const proj = getActiveProject();
+      const listEl = document.getElementById("collaboratorsList");
+      if (!proj.collaborators || proj.collaborators.length === 0) {
+        listEl.innerHTML = `<div class="text-slate-500 italic">No members assigned yet.</div>`;
+        return;
+      }
+      listEl.innerHTML = proj.collaborators.map(e => `
+        <div class="flex justify-between items-center bg-slate-950 px-3 py-1.5 rounded border border-slate-800">
+          <span class="text-slate-200 font-mono">${e}</span>
+          <button onclick="handleRemoveCollaborator('${e}')" class="text-slate-500 hover:text-rose-400 p-1"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+      `).join('');
     }
 
     function handleAddCollaborator(e) {
       e.preventDefault();
-      const email = document.getElementById("newCollabEmail").value.trim().toLowerCase();
+      const emailInput = document.getElementById("newCollabEmail");
+      const email = emailInput.value.trim().toLowerCase();
       const proj = getActiveProject();
-      if (proj && !proj.collaborators.includes(email) && email !== proj.owner.toLowerCase()) {
-        proj.collaborators.push(email);
-        saveToCloud();
-        openAccessModal();
+
+      if (!proj) return;
+      if (!proj.collaborators) proj.collaborators = [];
+
+      if (email === proj.owner.toLowerCase()) {
+        alert("Owner ဖြစ်သူကို Collaborator ထပ်ထည့်စရာမလိုပါ။");
+        return;
       }
-      document.getElementById("newCollabEmail").value = '';
+
+      if (proj.collaborators.includes(email)) {
+        alert("ဤအီးမေးလ်ကို ထည့်သွင်းပြီး ဖြစ်ပါသည်။");
+        return;
+      }
+
+      // Add to project collaborators array
+      proj.collaborators.push(email);
+      saveToCloud();
+      
+      emailInput.value = '';
+      renderCollaboratorsList();
     }
 
     function handleRemoveCollaborator(email) {
       const proj = getActiveProject();
-      proj.collaborators = proj.collaborators.filter(c => c !== email);
+      if (!proj) return;
+      proj.collaborators = (proj.collaborators || []).filter(c => c !== email);
       saveToCloud();
-      openAccessModal();
+      renderCollaboratorsList();
     }
 
     function handleCreateProject(e) {
@@ -625,7 +666,7 @@
       if (!proj || proj.owner.toLowerCase() !== currentUser.email.toLowerCase()) { alert("Ownerသာ ဖျက်ခွင့်ရှိသည်။"); return; }
       if (!confirm("Delete project?")) return;
       globalStore.projects = globalStore.projects.filter(p => p.id !== proj.id);
-      activeProjectId = null; // Reset active to trigger fallback to first available
+      activeProjectId = null;
       saveToCloud();
     }
 
@@ -918,12 +959,7 @@
       document.getElementById('expenseTableBody').innerHTML = (p.expenses || []).map(e => `<tr class="text-xs hover:bg-slate-800/20"><td class="py-2 px-3 text-slate-300">${e.name}</td><td class="py-2 px-3 font-mono text-amber-300">$${e.amount}</td><td class="py-2 px-3 text-right"><button onclick="getActiveProject().expenses = getActiveProject().expenses.filter(x=>x.id!=='${e.id}');saveToCloud();" class="text-slate-500 hover:text-rose-400"><i class="fa-solid fa-trash-can"></i></button></td></tr>`).join('');
     }
 
-    // Fix: Switch project state correctly
-    function switchProject(id) {
-      activeProjectId = id;
-      render();
-    }
-
+    function switchProject(id) { activeProjectId = id; render(); }
     function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
     function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
     function switchTab(tabId) {
@@ -947,17 +983,9 @@
       const permitted = getPermittedProjects();
       const proj = getActiveProject();
       const select = document.getElementById('projectSelect');
-      
-      select.innerHTML = permitted.map(p => `<option value="${p.id}" ${proj && p.id === proj.id ? 'selected' : ''}>${p.name}</option>`).join('') || '<option>No Projects</option>';
-      
+      select.innerHTML = permitted.map(p => `<option value="${p.id}" ${proj && p.id === p.id ? 'selected' : ''}>${p.name}</option>`).join('') || '<option>No Projects</option>';
       if (proj) {
-        renderCharter(); 
-        renderChapters(); 
-        renderTasks(); 
-        renderGantt(); 
-        renderRisks(); 
-        renderIssues(); 
-        renderBudget();
+        renderCharter(); renderChapters(); renderTasks(); renderGantt(); renderRisks(); renderIssues(); renderBudget();
       }
     }
   </script>
