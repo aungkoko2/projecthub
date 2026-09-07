@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ProjectHub - Cloud Sync Edition</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans">
+
+  <header class="bg-slate-900 border-b border-slate-800 px-6 py-3 flex flex-wrap justify-between items-center gap-4">
+    <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2">
+        <i class="fa-solid fa-cubes-stacked text-indigo-400 text-xl"></i>
+        <h1 class="text-lg font-bold">ProjectHub <span id="syncBadge" class="text-xs bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded ml-1 flex items-center gap-1 inline-flex"><i class="fa-solid fa-arrows-rotate animate-spin"></i> Connecting...</span></h1>
+      </div>
+      <div class="h-5 w-px bg-slate-800"></div>
+      
+      <div class="flex items-center gap-2">
+        <select id="projectSelect" onchange="switchProject(this.value)" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm font-medium text-slate-200 focus:outline-none focus:border-indigo-500"></select>
+        
+        <button onclick="openModal('newProjectModal')" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 shadow transition">
+          <i class="fa-solid fa-folder-plus"></i> New Project
+        </button>
+
+        <button onclick="handleDeleteCurrentProject()" title="Delete Current Project" class="bg-slate-800 hover:bg-rose-900/40 text-slate-400 hover:text-rose-400 border border-slate-700 px-2.5 py-1.5 rounded-lg text-xs font-medium transition">
+          <i class="fa-solid fa-trash-can"></i>
+        </button>
+      </div>
+    </div>
+
+    <nav class="flex flex-wrap gap-1 bg-slate-800/80 p-1 rounded-xl border border-slate-700/60 text-xs">
+      <button onclick="switchTab('charter')" id="tab-charter" class="tab-btn px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5">
+        <i class="fa-solid fa-scroll text-amber-400"></i> Project Charter
+      </button>
+      <button onclick="switchTab('chapters')" id="tab-chapters" class="tab-btn px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5">
+        <i class="fa-solid fa-book-bookmark text-cyan-400"></i> Chapters
+      </button>
+      <button onclick="switchTab('tasks')" id="tab-tasks" class="tab-btn px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-200 transition">Tasks & Kanban</button>
+      <button onclick="switchTab('gantt')" id="tab-gantt" class="tab-btn px-3 py-1.5 rounded-lg font-medium transition bg-indigo-600 text-white flex items-center gap-1.5">
+        <i class="fa-solid fa-chart-gantt text-indigo-300"></i> Gantt
+      </button>
+      <button onclick="switchTab('risks')" id="tab-risks" class="tab-btn px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-200 transition">Risk Matrix</button>
+      <button onclick="switchTab('issues')" id="tab-issues" class="tab-btn px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5">
+        <i class="fa-solid fa-bug text-rose-400"></i> Issues
+      </button>
+      <button onclick="switchTab('budget')" id="tab-budget" class="tab-btn px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5">
+        <i class="fa-solid fa-wallet text-emerald-400"></i> Budget
+      </button>
+    </nav>
+
+    <div class="flex items-center gap-2">
+      <button onclick="exportData()" title="Download Backup" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition">
+        <i class="fa-solid fa-download text-indigo-400"></i> Export
+      </button>
+      <label title="Restore from Backup" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition cursor-pointer">
+        <i class="fa-solid fa-upload text-emerald-400"></i> Import
+        <input type="file" id="importFileInput" accept=".json" onchange="importData(event)" class="hidden" />
+      </label>
+    </div>
+  </header>
+
+  <main class="flex-1 p-6 max-w-7xl mx-auto w-full">
+
+    <section id="view-charter" class="hidden space-y-6">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <div>
+          <h2 class="text-base font-bold text-slate-100 flex items-center gap-2"><i class="fa-solid fa-scroll text-amber-400"></i> Project Charter</h2>
+          <p class="text-xs text-slate-400">စီမံကိန်း၏ ပင်မရည်ရွယ်ချက်နှင့် အခြေခံစည်းမျဉ်းများ</p>
+        </div>
+        <button onclick="saveCharterData()" class="bg-amber-600 hover:bg-amber-500 text-white px-4 py-1.5 rounded-lg text-xs font-medium"><i class="fa-solid fa-floppy-disk mr-1"></i>Save Charter</button>
+      </div>
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2 space-y-4">
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
+            <h3 class="text-xs font-bold text-slate-300">Problem Statement</h3>
+            <textarea id="charterProblem" rows="3" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-amber-500"></textarea>
+            <h3 class="text-xs font-bold text-slate-300">Objectives</h3>
+            <textarea id="charterObjectives" rows="3" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-amber-500"></textarea>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+              <span class="text-xs font-bold text-emerald-400 block mb-1">In-Scope</span>
+              <textarea id="charterInScope" rows="4" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-emerald-500"></textarea>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+              <span class="text-xs font-bold text-rose-400 block mb-1">Out-of-Scope</span>
+              <textarea id="charterOutScope" rows="4" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-rose-500"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3 text-xs">
+          <h3 class="font-bold text-slate-300">Governance & Schedule</h3>
+          <div><label class="text-slate-400 block mb-1">Sponsor</label><input id="charterSponsor" type="text" class="w-full bg-slate-950 border border-slate-800 rounded p-1.5 text-white" /></div>
+          <div><label class="text-slate-400 block mb-1">Team</label><input id="charterTeam" type="text" class="w-full bg-slate-950 border border-slate-800 rounded p-1.5 text-white" /></div>
+          <div><label class="text-slate-400 block mb-1">Kickoff</label><input id="charterKickoff" type="date" class="w-full bg-slate-950 border border-slate-800 rounded p-1.5 text-white" /></div>
+          <div><label class="text-slate-400 block mb-1">Handover</label><input id="charterHandover" type="date" class="w-full bg-slate-950 border border-slate-800 rounded p-1.5 text-white" /></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-chapters" class="hidden space-y-4">
+      <div class="flex justify-between items-center">
+        <h2 class="text-base font-bold text-slate-100 flex items-center gap-2"><i class="fa-solid fa-book-bookmark text-cyan-400"></i> Project Chapters</h2>
+        <button onclick="openAddChapterModal()" class="bg-cyan-600 hover:bg-cyan-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium"><i class="fa-solid fa-plus mr-1"></i>New Chapter</button>
+      </div>
+      <div id="chaptersGrid" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+    </section>
+
+    <section id="view-gantt" class="space-y-4">
+      <div class="bg-slate-900/70 border border-slate-800 rounded-xl p-4 space-y-4">
+        <div class="flex justify-between items-center">
+          <h2 class="text-base font-bold text-slate-100 flex items-center gap-2"><i class="fa-solid fa-diagram-next text-indigo-400"></i> Gantt Schedule</h2>
+          <button onclick="openAddTaskModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium"><i class="fa-solid fa-plus mr-1"></i>Add Task</button>
+        </div>
+        <div class="border border-slate-800 rounded-xl bg-slate-950 overflow-x-auto">
+          <div id="gantt-chart-wrapper" class="min-w-[850px] p-4"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-tasks" class="hidden space-y-4">
+      <div class="flex justify-between items-center">
+        <div class="flex items-center gap-3">
+          <h2 class="text-base font-semibold">Kanban Board</h2>
+          <select id="kanbanChapterFilter" onchange="renderTasks()" class="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200"></select>
+        </div>
+        <button onclick="openAddTaskModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium"><i class="fa-solid fa-plus mr-1"></i>Add Task</button>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-4 flex flex-col min-h-[400px]">
+          <div class="flex justify-between items-center pb-2 mb-3 border-b border-slate-800 font-semibold text-xs text-slate-300"><span>TO-DO</span><span id="count-todo" class="bg-slate-800 px-2 py-0.5 rounded font-mono">0</span></div>
+          <div id="tasks-todo" class="space-y-3 flex-1 overflow-y-auto"></div>
+        </div>
+        <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-4 flex flex-col min-h-[400px]">
+          <div class="flex justify-between items-center pb-2 mb-3 border-b border-slate-800 font-semibold text-xs text-blue-400"><span>IN PROGRESS</span><span id="count-inprogress" class="bg-slate-800 px-2 py-0.5 rounded font-mono">0</span></div>
+          <div id="tasks-inprogress" class="space-y-3 flex-1 overflow-y-auto"></div>
+        </div>
+        <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-4 flex flex-col min-h-[400px]">
+          <div class="flex justify-between items-center pb-2 mb-3 border-b border-slate-800 font-semibold text-xs text-emerald-400"><span>COMPLETED</span><span id="count-done" class="bg-slate-800 px-2 py-0.5 rounded font-mono">0</span></div>
+          <div id="tasks-done" class="space-y-3 flex-1 overflow-y-auto"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-risks" class="hidden space-y-4">
+      <div class="flex justify-between items-center">
+        <h2 class="text-base font-bold">Risk Register</h2>
+        <button onclick="openModal('riskModal')" class="bg-amber-600 hover:bg-amber-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium"><i class="fa-solid fa-plus mr-1"></i>Add Risk</button>
+      </div>
+      <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-x-auto">
+        <table class="w-full text-left text-xs"><tbody id="riskTableBody" class="divide-y divide-slate-800/60"></tbody></table>
+      </div>
+    </section>
+
+    <section id="view-issues" class="hidden space-y-4">
+      <div class="flex justify-between items-center">
+        <h2 class="text-base font-bold text-slate-100 flex items-center gap-2"><i class="fa-solid fa-bug text-rose-400"></i> Issues</h2>
+        <button onclick="openModal('issueModal')" class="bg-rose-600 hover:bg-rose-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium"><i class="fa-solid fa-plus mr-1"></i>Log Issue</button>
+      </div>
+      <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-x-auto">
+        <table class="w-full text-left text-xs"><tbody id="issueTableBody" class="divide-y divide-slate-800/60"></tbody></table>
+      </div>
+    </section>
+
+    <section id="view-budget" class="hidden space-y-6">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3 text-xs">
+          <h3 class="font-bold text-sm">Budget Plan</h3>
+          <div class="flex gap-2">
+            <input id="budgetTotalInput" type="number" class="flex-1 bg-slate-950 border border-slate-700 rounded p-1.5 text-white" />
+            <button onclick="saveAllocatedBudget()" class="bg-indigo-600 px-3 py-1.5 rounded font-medium">Save</button>
+          </div>
+          <div class="border-t border-slate-800 pt-3 space-y-1">
+            <div class="flex justify-between text-slate-400"><span>Allocated:</span><span id="budget-allocated-view" class="font-mono text-white">$0</span></div>
+            <div class="flex justify-between text-slate-400"><span>Spent:</span><span id="budget-spent-view" class="font-mono text-amber-400">$0</span></div>
+            <div class="flex justify-between font-semibold pt-1 border-t border-slate-800"><span>Remaining:</span><span id="budget-remaining-view" class="font-mono text-emerald-400">$0</span></div>
+          </div>
+        </div>
+        <div class="md:col-span-2 bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col text-xs">
+          <h3 class="font-bold text-sm mb-2">Log Expense</h3>
+          <form onsubmit="addExpense(event)" class="grid grid-cols-1 sm:grid-cols-5 gap-2 mb-3">
+            <input id="expName" type="text" required placeholder="Item" class="sm:col-span-3 bg-slate-950 border border-slate-700 rounded p-1.5 text-white" />
+            <input id="expAmount" type="number" required placeholder="Cost" class="sm:col-span-1 bg-slate-950 border border-slate-700 rounded p-1.5 text-white" />
+            <button type="submit" class="bg-emerald-600 py-1.5 rounded font-medium">Add</button>
+          </form>
+          <table class="w-full text-left"><tbody id="expenseTableBody" class="divide-y divide-slate-800/60"></tbody></table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <div id="chapterModal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 w-full max-w-md text-xs space-y-3">
+      <h3 class="text-sm font-bold text-cyan-400" id="chapterModalTitleText">Chapter</h3>
+      <form onsubmit="handleSaveChapter(event)" class="space-y-3">
+        <input type="hidden" id="editingChapterId" />
+        <input id="nchName" type="text" required placeholder="Name" class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white" />
+        <select id="nchColor" class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white">
+          <option value="cyan">Cyan</option><option value="indigo" selected>Indigo</option><option value="amber">Amber</option><option value="emerald">Emerald</option><option value="purple">Purple</option>
+        </select>
+        <textarea id="nchDesc" rows="2" placeholder="Goal" class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white"></textarea>
+        <div class="flex justify-end gap-2"><button type="button" onclick="closeModal('chapterModal')" class="px-3 py-1 text-slate-400">Cancel</button><button type="submit" class="bg-cyan-600 px-3 py-1 rounded text-white">Save</button></div>
+      </form>
+    </div>
+  </div>
+
+  <div id="taskModal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 w-full max-w-md text-xs space-y-3">
+      <h3 class="text-sm font-bold text-indigo-400" id="taskModalTitleText">Task</h3>
+      <form onsubmit="handleSaveTask(event)" class="space-y-2.5">
+        <input type="hidden" id="editingTaskId" />
+        <input id="ntTitle" type="text" required placeholder="Title" class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white" />
+        <select id="ntChapter" class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white"></select>
+        <textarea id="ntDesc" rows="2" placeholder="Description / Checklist" class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white"></textarea>
+        <div class="grid grid-cols-2 gap-2">
+          <input id="ntStartDate" type="date" required class="bg-slate-950 border border-slate-700 rounded p-2 text-white" />
+          <input id="ntEndDate" type="date" required class="bg-slate-950 border border-slate-700 rounded p-2 text-white" />
+        </div>
+        <select id="ntDependency" class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white"></select>
+        <select id="ntPriority" class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white">
+          <option value="Low">Low</option><option value="Medium" selected>Medium</option><option value="High">High</option>
+        </select>
+        <div class="flex justify-end gap-2 pt-1"><button type="button" onclick="closeModal('taskModal')" class="px-3 py-1 text-slate-400">Cancel</button><button type="submit" class="bg-indigo-600 px-3 py-1 rounded text-white">Save</button></div>
+      </form>
+    </div>
+  </div>
+
+  <div id="newProjectModal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 w-full max-w-md text-xs space-y-3">
+      <h3 class="text-sm font-bold text-slate-100">Create Project</h3>
+      <form onsubmit="handleCreateProject(event)" class="space-y-3">
+        <input id="npName" type="text" required placeholder="Project Name" class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white" />
+        <input id="npBudget" type="number" placeholder="Budget" value="0" class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white" />
+        <div class="flex justify-end gap-2"><button type="button" onclick="closeModal('newProjectModal')" class="px-3 py-1 text-slate-400">Cancel</button><button type="submit" class="bg-indigo-600 px-3 py-1 rounded text-white">Create</button></div>
+      </form>
+    </div>
+  </div>
+
+  <div id="riskModal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 w-full max-w-md text-xs space-y-3">
+      <h3 class="text-sm font-bold text-amber-400">Risk Item</h3>
+      <form onsubmit="handleCreateRisk(event)" class="space-y-2.5">
+        <input id="nrDesc" type="text" required placeholder="Description" class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white" />
+        <div class="grid grid-cols-2 gap-2">
+          <select id="nrImpact" class="bg-slate-950 border border-slate-700 rounded p-2 text-white"><option value="Low">Low</option><option value="Medium">Medium</option><option value="High" selected>High</option></select>
+          <select id="nrLikelihood" class="bg-slate-950 border border-slate-700 rounded p-2 text-white"><option value="Low">Low</option><option value="Medium">Medium</option><option value="High">High</option></select>
+        </div>
+        <textarea id="nrMitigation" rows="2" placeholder="Mitigation" class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white"></textarea>
+        <div class="flex justify-end gap-2"><button type="button" onclick="closeModal('riskModal')" class="px-3 py-1 text-slate-400">Cancel</button><button type="submit" class="bg-amber-600 px-3 py-1 rounded text-white">Add Risk</button></div>
+      </form>
+    </div>
+  </div>
+
+  <div id="issueModal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 w-full max-w-md text-xs space-y-3">
+      <h3 class="text-sm font-bold text-rose-400">Log Issue</h3>
+      <form onsubmit="handleCreateIssue(event)" class="space-y-2.5">
+        <input id="niDesc" type="text" required placeholder="Issue" class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white" />
+        <div class="grid grid-cols-2 gap-2">
+          <select id="niSeverity" class="bg-slate-950 border border-slate-700 rounded p-2 text-white"><option value="Critical">Critical</option><option value="High" selected>High</option><option value="Medium">Medium</option><option value="Low">Low</option></select>
+          <select id="niStatus" class="bg-slate-950 border border-slate-700 rounded p-2 text-white"><option value="Open">Open</option><option value="Investigating">Investigating</option><option value="Resolved">Resolved</option></select>
+        </div>
+        <input id="niOwner" type="text" placeholder="Owner" class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white" />
+        <textarea id="niNotes" rows="2" placeholder="Notes" class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white"></textarea>
+        <div class="flex justify-end gap-2"><button type="button" onclick="closeModal('issueModal')" class="px-3 py-1 text-slate-400">Cancel</button><button type="submit" class="bg-rose-600 px-3 py-1 rounded text-white">Add Issue</button></div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // ==========================================
+    // ထည့်သွင်းပေးထားသော Firebase Configuration
+    // ==========================================
+    const firebaseConfig = {
+      apiKey: "AIzaSyCmf1ETmyZMz7HNGd4x-NOKA-uhqYo1kwg",
+      authDomain: "project-hub-47886.firebaseapp.com",
+      databaseURL: "https://project-hub-47886-default-rtdb.firebaseio.com",
+      projectId: "project-hub-47886",
+      storageBucket: "project-hub-47886.firebasestorage.app",
+      messagingSenderId: "765690265271",
+      appId: "1:765690265271:web:9ae41803cc40ba819d5732"
+    };
+
+    // Firebase Initialize
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const dbRef = db.ref("project_hub_data");
+
+    // Local in-memory state
+    let appData = {
+      activeId: 'p1',
+      projects: [{
+        id: 'p1',
+        name: 'My Cloud Project',
+        allocatedBudget: 0,
+        charter: {},
+        chapters: [{ id: 'ch-1', name: 'Phase 1: Kickoff', color: 'indigo', desc: 'Initial phase' }],
+        tasks: [],
+        risks: [],
+        issues: [],
+        expenses: []
+      }]
+    };
+
+    // Realtime Cloud Listener
+    dbRef.on("value", (snapshot) => {
+      const val = snapshot.val();
+      if (val && val.projects && Array.isArray(val.projects)) {
+        appData = val;
+        render();
+        const badge = document.getElementById("syncBadge");
+        badge.innerHTML = '<i class="fa-solid fa-cloud"></i> Cloud Live';
+        badge.className = "text-xs bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded ml-1 flex items-center gap-1 inline-flex";
+      } else {
+        // Initial setup to push state if cloud is empty
+        save();
+      }
+    }, (error) => {
+      console.error("Database connection error:", error);
+      const badge = document.getElementById("syncBadge");
+      badge.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Sync Error';
+      badge.className = "text-xs bg-rose-500/20 text-rose-300 px-2 py-0.5 rounded ml-1 flex items-center gap-1 inline-flex";
+      alert("Firebase သို့ ချိတ်ဆက်မရပါ: Database Rules တွင် Test mode ဖွင့်ထားခြင်း ရှိမရှိ စစ်ဆေးပေးပါ။");
+    });
+
+    // Save to Cloud
+    function save() {
+      const badge = document.getElementById("syncBadge");
+      badge.innerHTML = '<i class="fa-solid fa-arrows-rotate animate-spin"></i> Syncing...';
+      badge.className = "text-xs bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded ml-1 flex items-center gap-1 inline-flex";
+
+      dbRef.set(appData).then(() => {
+        render();
+        badge.innerHTML = '<i class="fa-solid fa-cloud"></i> Cloud Live';
+        badge.className = "text-xs bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded ml-1 flex items-center gap-1 inline-flex";
+      }).catch(err => {
+        console.error("Firebase Sync Error:", err);
+      });
+    }
+
+    function getActiveProject() {
+      let proj = appData.projects.find(p => p.id === appData.activeId);
+      if (!proj) {
+        proj = appData.projects[0];
+        appData.activeId = proj.id;
+      }
+      if (!proj.charter) proj.charter = {};
+      if (!proj.chapters) proj.chapters = [];
+      if (!proj.expenses) proj.expenses = [];
+      if (!proj.tasks) proj.tasks = [];
+      if (!proj.risks) proj.risks = [];
+      if (!proj.issues) proj.issues = [];
+      return proj;
+    }
+
+    function getChapterColorClasses(color) {
+      const themes = {
+        cyan: { bg: 'bg-cyan-500/15', text: 'text-cyan-300', border: 'border-cyan-500/30' },
+        indigo: { bg: 'bg-indigo-500/15', text: 'text-indigo-300', border: 'border-indigo-500/30' },
+        amber: { bg: 'bg-amber-500/15', text: 'text-amber-300', border: 'border-amber-500/30' },
+        emerald: { bg: 'bg-emerald-500/15', text: 'text-emerald-300', border: 'border-emerald-500/30' },
+        purple: { bg: 'bg-purple-500/15', text: 'text-purple-300', border: 'border-purple-500/30' }
+      };
+      return themes[color] || themes.indigo;
+    }
+
+    // --- CHARTER ---
+    function renderCharter() {
+      const c = getActiveProject().charter || {};
+      document.getElementById('charterProblem').value = c.problem || '';
+      document.getElementById('charterObjectives').value = c.objectives || '';
+      document.getElementById('charterInScope').value = c.inScope || '';
+      document.getElementById('charterOutScope').value = c.outScope || '';
+      document.getElementById('charterSponsor').value = c.sponsor || '';
+      document.getElementById('charterTeam').value = c.team || '';
+      document.getElementById('charterKickoff').value = c.kickoff || '';
+      document.getElementById('charterHandover').value = c.handover || '';
+    }
+
+    function saveCharterData() {
+      const proj = getActiveProject();
+      proj.charter = {
+        problem: document.getElementById('charterProblem').value.trim(),
+        objectives: document.getElementById('charterObjectives').value.trim(),
+        inScope: document.getElementById('charterInScope').value.trim(),
+        outScope: document.getElementById('charterOutScope').value.trim(),
+        sponsor: document.getElementById('charterSponsor').value.trim(),
+        team: document.getElementById('charterTeam').value.trim(),
+        kickoff: document.getElementById('charterKickoff').value,
+        handover: document.getElementById('charterHandover').value
+      };
+      save();
+    }
+
+    // --- CHAPTERS ---
+    function openAddChapterModal() {
+      document.getElementById('editingChapterId').value = '';
+      document.getElementById('chapterModalTitleText').innerText = 'Add Chapter';
+      document.getElementById('nchName').value = '';
+      document.getElementById('nchColor').value = 'indigo';
+      document.getElementById('nchDesc').value = '';
+      openModal('chapterModal');
+    }
+
+    function openEditChapterModal(chId) {
+      const chapter = getActiveProject().chapters.find(c => c.id === chId);
+      if (!chapter) return;
+      document.getElementById('editingChapterId').value = chapter.id;
+      document.getElementById('chapterModalTitleText').innerText = 'Edit Chapter';
+      document.getElementById('nchName').value = chapter.name;
+      document.getElementById('nchColor').value = chapter.color || 'indigo';
+      document.getElementById('nchDesc').value = chapter.desc || '';
+      openModal('chapterModal');
+    }
+
+    function handleSaveChapter(e) {
+      e.preventDefault();
+      const editingId = document.getElementById('editingChapterId').value;
+      const name = document.getElementById('nchName').value.trim();
+      const color = document.getElementById('nchColor').value;
+      const desc = document.getElementById('nchDesc').value.trim();
+      const proj = getActiveProject();
+
+      if (editingId) {
+        const ch = proj.chapters.find(c => c.id === editingId);
+        if (ch) { ch.name = name; ch.color = color; ch.desc = desc; }
+      } else {
+        proj.chapters.push({ id: 'ch-' + Date.now(), name, color, desc });
+      }
+      closeModal('chapterModal');
+      save();
+    }
+
+    function deleteChapter(chId) {
+      if (!confirm("Delete chapter?")) return;
+      const proj = getActiveProject();
+      proj.chapters = proj.chapters.filter(c => c.id !== chId);
+      proj.tasks.forEach(t => { if (t.chapterId === chId) t.chapterId = null; });
+      save();
+    }
+
+    function renderChapters() {
+      const proj = getActiveProject();
+      const grid = document.getElementById('chaptersGrid');
+      grid.innerHTML = (proj.chapters || []).map(ch => {
+        const theme = getChapterColorClasses(ch.color);
+        const chTasks = proj.tasks.filter(t => t.chapterId === ch.id);
+        const doneTasks = chTasks.filter(t => t.status === 'done').length;
+        const pct = chTasks.length ? Math.round((doneTasks / chTasks.length) * 100) : 0;
+        return `
+          <div class="bg-slate-900 border ${theme.border} rounded-xl p-4 space-y-3 shadow">
+            <div class="flex justify-between items-start">
+              <span class="text-xs px-2 py-0.5 rounded font-medium ${theme.bg} ${theme.text} border ${theme.border}">${ch.name}</span>
+              <div class="flex gap-1.5">
+                <button onclick="openEditChapterModal('${ch.id}')" class="text-slate-500 hover:text-cyan-400"><i class="fa-solid fa-pen-to-square"></i></button>
+                <button onclick="deleteChapter('${ch.id}')" class="text-slate-500 hover:text-rose-400"><i class="fa-regular fa-trash-can"></i></button>
+              </div>
+            </div>
+            <p class="text-xs text-slate-400">${ch.desc || '-'}</p>
+            <div class="text-[11px] text-slate-400 border-t border-slate-800 pt-2 flex justify-between">
+              <span>Progress: ${doneTasks}/${chTasks.length}</span><span class="font-mono text-slate-200">${pct}%</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // --- TASKS ---
+    function populateDependencyDropdown(excludeId = null) {
+      const select = document.getElementById('ntDependency');
+      select.innerHTML = '<option value="">None (Independent)</option>' + 
+        getActiveProject().tasks.filter(t => t.id !== excludeId).map(t => `<option value="${t.id}">${t.title}</option>`).join('');
+    }
+
+    function populateChapterDropdown(selectedId = null) {
+      const select = document.getElementById('ntChapter');
+      select.innerHTML = '<option value="">General</option>' + 
+        getActiveProject().chapters.map(c => `<option value="${c.id}" ${c.id === selectedId ? 'selected' : ''}>${c.name}</option>`).join('');
+    }
+
+    function openAddTaskModal() {
+      document.getElementById('editingTaskId').value = '';
+      document.getElementById('taskModalTitleText').innerText = 'New Task';
+      document.getElementById('ntTitle').value = '';
+      document.getElementById('ntDesc').value = '';
+      document.getElementById('ntStartDate').value = '';
+      document.getElementById('ntEndDate').value = '';
+      populateChapterDropdown();
+      populateDependencyDropdown();
+      openModal('taskModal');
+    }
+
+    function openEditTaskModal(id) {
+      const task = getActiveProject().tasks.find(t => t.id === id);
+      if (!task) return;
+      document.getElementById('editingTaskId').value = task.id;
+      document.getElementById('taskModalTitleText').innerText = 'Edit Task';
+      document.getElementById('ntTitle').value = task.title;
+      document.getElementById('ntDesc').value = task.desc || '';
+      document.getElementById('ntStartDate').value = task.startDate;
+      document.getElementById('ntEndDate').value = task.endDate;
+      document.getElementById('ntPriority').value = task.priority || 'Medium';
+      populateChapterDropdown(task.chapterId);
+      populateDependencyDropdown(task.id);
+      document.getElementById('ntDependency').value = task.dependsOn || '';
+      openModal('taskModal');
+    }
+
+    function handleSaveTask(e) {
+      e.preventDefault();
+      const id = document.getElementById('editingTaskId').value;
+      const title = document.getElementById('ntTitle').value.trim();
+      const chapterId = document.getElementById('ntChapter').value || null;
+      const desc = document.getElementById('ntDesc').value.trim();
+      const startDate = document.getElementById('ntStartDate').value;
+      const endDate = document.getElementById('ntEndDate').value;
+      const dependsOn = document.getElementById('ntDependency').value || null;
+      const priority = document.getElementById('ntPriority').value;
+      const proj = getActiveProject();
+
+      if (id) {
+        const t = proj.tasks.find(x => x.id === id);
+        if (t) { t.title = title; t.chapterId = chapterId; t.desc = desc; t.startDate = startDate; t.endDate = endDate; t.dependsOn = dependsOn; t.priority = priority; }
+      } else {
+        proj.tasks.push({ id: 't-' + Date.now(), title, chapterId, desc, startDate, endDate, dependsOn, priority, status: 'todo' });
+      }
+      closeModal('taskModal');
+      save();
+    }
+
+    function isTaskBlocked(task, proj) {
+      if (!task.dependsOn) return { blocked: false };
+      const prereq = proj.tasks.find(t => t.id === task.dependsOn);
+      if (!prereq || prereq.status === 'done') return { blocked: false };
+      return { blocked: true, blockerName: prereq.title };
+    }
+
+    function setTaskStatus(taskId, targetStatus) {
+      const proj = getActiveProject();
+      const task = proj.tasks.find(t => t.id === taskId);
+      if (!task) return;
+      if (targetStatus !== 'todo') {
+        const { blocked, blockerName } = isTaskBlocked(task, proj);
+        if (blocked) { alert(`Blocked by: "${blockerName}"`); return; }
+      }
+      task.status = targetStatus;
+      save();
+    }
+
+    function deleteTask(id) {
+      if (!confirm("Delete task?")) return;
+      const proj = getActiveProject();
+      proj.tasks.forEach(t => { if (t.dependsOn === id) t.dependsOn = null; });
+      proj.tasks = proj.tasks.filter(t => t.id !== id);
+      save();
+    }
+
+    function renderTasks() {
+      const proj = getActiveProject();
+      const filterSelect = document.getElementById('kanbanChapterFilter');
+      const selectedChapter = filterSelect ? filterSelect.value : 'all';
+
+      if (filterSelect) {
+        filterSelect.innerHTML = '<option value="all">All Chapters</option>' + 
+          proj.chapters.map(c => `<option value="${c.id}" ${c.id === selectedChapter ? 'selected' : ''}>${c.name}</option>`).join('');
+      }
+
+      const cols = { todo: document.getElementById('tasks-todo'), inprogress: document.getElementById('tasks-inprogress'), done: document.getElementById('tasks-done') };
+      Object.values(cols).forEach(c => c.innerHTML = '');
+      let counts = { todo: 0, inprogress: 0, done: 0 };
+
+      const filtered = selectedChapter === 'all' ? proj.tasks : proj.tasks.filter(t => t.chapterId === selectedChapter);
+
+      filtered.forEach(task => {
+        counts[task.status] = (counts[task.status] || 0) + 1;
+        const { blocked } = isTaskBlocked(task, proj);
+        const chapter = task.chapterId ? proj.chapters.find(c => c.id === task.chapterId) : null;
+        const theme = chapter ? getChapterColorClasses(chapter.color) : null;
+
+        const card = document.createElement('div');
+        card.className = `border rounded-lg p-3 text-xs space-y-2 ${blocked ? 'bg-slate-900/90 border-rose-500/40' : 'bg-slate-800/90 border-slate-700/60'}`;
+        card.innerHTML = `
+          <div class="flex justify-between items-start">
+            <span class="font-medium ${blocked ? 'text-rose-200' : 'text-slate-200'}">${task.title}</span>
+            <div class="flex gap-1.5"><button onclick="openEditTaskModal('${task.id}')" class="text-slate-400 hover:text-indigo-400"><i class="fa-solid fa-pen-to-square"></i></button><button onclick="deleteTask('${task.id}')" class="text-slate-400 hover:text-rose-400"><i class="fa-regular fa-trash-can"></i></button></div>
+          </div>
+          ${chapter ? `<span class="text-[9px] px-1.5 py-0.5 rounded ${theme.bg} ${theme.text} border ${theme.border}">${chapter.name}</span>` : ''}
+          ${task.desc ? `<p class="text-[11px] text-slate-400 bg-slate-950/60 p-1.5 rounded">${task.desc}</p>` : ''}
+          <div class="flex justify-between items-center text-[10px] text-slate-400 border-t border-slate-700/40 pt-1">
+            <span>${task.startDate} &rarr; ${task.endDate}</span>
+            <div class="flex gap-1">
+              ${task.status !== 'todo' ? `<button onclick="setTaskStatus('${task.id}', 'todo')" class="px-1 bg-slate-700 rounded">&larr;</button>` : ''}
+              ${task.status !== 'inprogress' ? `<button onclick="setTaskStatus('${task.id}', 'inprogress')" class="px-1.5 py-0.5 rounded bg-blue-600 text-white">${blocked ? 'Locked' : 'Start'}</button>` : ''}
+              ${task.status !== 'done' ? `<button onclick="setTaskStatus('${task.id}', 'done')" class="px-1.5 py-0.5 rounded bg-emerald-600 text-white">Done</button>` : ''}
+            </div>
+          </div>
+        `;
+        if (cols[task.status]) cols[task.status].appendChild(card);
+      });
+
+      document.getElementById('count-todo').innerText = counts.todo;
+      document.getElementById('count-inprogress').innerText = counts.inprogress;
+      document.getElementById('count-done').innerText = counts.done;
+    }
+
+    // --- GANTT ---
+    function renderGantt() {
+      const proj = getActiveProject();
+      const container = document.getElementById('gantt-chart-wrapper');
+      if (!proj.tasks || proj.tasks.length === 0) {
+        container.innerHTML = '<div class="text-center py-6 text-slate-500 text-xs">No tasks.</div>';
+        return;
+      }
+      const allDates = [];
+      proj.tasks.forEach(t => { if (t.startDate) allDates.push(new Date(t.startDate).getTime()); if (t.endDate) allDates.push(new Date(t.endDate).getTime()); });
+      const minTime = Math.min(...allDates) - 86400000;
+      const maxTime = Math.max(...allDates) + 86400000 * 2;
+      const totalSpan = maxTime - minTime;
+      const days = Math.ceil(totalSpan / 86400000);
+
+      let header = '';
+      for (let i = 0; i < days; i++) {
+        const d = new Date(minTime + (i * 86400000));
+        header += `<div class="flex-1 text-center py-1.5 text-[10px] border-r border-slate-800 text-slate-400 font-mono">${d.getMonth()+1}/${d.getDate()}</div>`;
+      }
+
+      let rows = proj.tasks.map(task => {
+        const sTime = new Date(task.startDate).getTime();
+        const eTime = new Date(task.endDate).getTime();
+        const leftPct = Math.max(0, Math.min(100, ((sTime - minTime) / totalSpan) * 100));
+        const widthPct = Math.max(2, Math.min(100 - leftPct, ((eTime - sTime + 86400000) / totalSpan) * 100));
+        const { blocked } = isTaskBlocked(task, proj);
+        const barColor = task.status === 'done' ? 'bg-emerald-500 text-emerald-950 font-bold' : (blocked ? 'bg-rose-500/80 text-white' : 'bg-blue-500 text-blue-950');
+
+        return `
+          <div class="flex items-center border-b border-slate-800/50 py-1.5 hover:bg-slate-900/30">
+            <div class="w-64 shrink-0 px-2 text-xs truncate text-slate-300">${task.title}</div>
+            <div class="flex-1 relative h-6">
+              <div onclick="openEditTaskModal('${task.id}')" class="cursor-pointer absolute top-1/2 -translate-y-1/2 h-4 rounded text-[9px] px-1.5 flex items-center truncate ${barColor}" style="left: ${leftPct}%; width: ${widthPct}%;">${task.title}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      container.innerHTML = `<div class="flex border-b border-slate-800 bg-slate-900 text-slate-300 font-bold text-xs"><div class="w-64 px-2 py-1.5 border-r border-slate-800">Task</div><div class="flex-1 flex">${header}</div></div>${rows}`;
+    }
+
+    // --- RISKS & ISSUES ---
+    function handleCreateRisk(e) {
+      e.preventDefault();
+      getActiveProject().risks.push({ id: 'r-' + Date.now(), desc: document.getElementById('nrDesc').value, impact: document.getElementById('nrImpact').value, likelihood: document.getElementById('nrLikelihood').value, mitigation: document.getElementById('nrMitigation').value });
+      closeModal('riskModal');
+      save();
+    }
+    function renderRisks() {
+      document.getElementById('riskTableBody').innerHTML = getActiveProject().risks.map(r => `
+        <tr class="hover:bg-slate-800/30 text-xs">
+          <td class="py-2 px-3 text-slate-200">${r.desc}</td>
+          <td class="py-2 px-3 text-rose-400 font-bold">${r.impact}</td>
+          <td class="py-2 px-3 text-slate-400">${r.mitigation || '-'}</td>
+        </tr>
+      `).join('');
+    }
+
+    function handleCreateIssue(e) {
+      e.preventDefault();
+      getActiveProject().issues.push({ id: 'iss-' + Date.now(), desc: document.getElementById('niDesc').value, severity: document.getElementById('niSeverity').value, status: document.getElementById('niStatus').value, owner: document.getElementById('niOwner').value, notes: document.getElementById('niNotes').value });
+      closeModal('issueModal');
+      save();
+    }
+    function renderIssues() {
+      document.getElementById('issueTableBody').innerHTML = getActiveProject().issues.map(i => `
+        <tr class="hover:bg-slate-800/30 text-xs">
+          <td class="py-2 px-3 text-slate-200">${i.desc}</td>
+          <td class="py-2 px-3 text-amber-400 font-mono">${i.severity}</td>
+          <td class="py-2 px-3">${i.status}</td>
+        </tr>
+      `).join('');
+    }
+
+    // --- BUDGET ---
+    function saveAllocatedBudget() {
+      getActiveProject().allocatedBudget = parseFloat(document.getElementById('budgetTotalInput').value) || 0;
+      save();
+    }
+    function addExpense(e) {
+      e.preventDefault();
+      getActiveProject().expenses.push({ id: 'exp-' + Date.now(), name: document.getElementById('expName').value, amount: parseFloat(document.getElementById('expAmount').value) || 0 });
+      document.getElementById('expName').value = ''; document.getElementById('expAmount').value = '';
+      save();
+    }
+    function renderBudget() {
+      const p = getActiveProject();
+      const spent = (p.expenses || []).reduce((acc, x) => acc + Number(x.amount), 0);
+      document.getElementById('budgetTotalInput').value = p.allocatedBudget || 0;
+      document.getElementById('budget-allocated-view').innerText = `$${(p.allocatedBudget||0).toLocaleString()}`;
+      document.getElementById('budget-spent-view').innerText = `$${spent.toLocaleString()}`;
+      document.getElementById('budget-remaining-view').innerText = `$${((p.allocatedBudget||0) - spent).toLocaleString()}`;
+      document.getElementById('expenseTableBody').innerHTML = (p.expenses || []).map(e => `
+        <tr class="text-xs hover:bg-slate-800/20"><td class="py-1 px-2 text-slate-300">${e.name}</td><td class="py-1 px-2 font-mono text-amber-300">$${e.amount}</td></tr>
+      `).join('');
+    }
+
+    // --- PROJECTS & COMMON ---
+    function handleCreateProject(e) {
+      e.preventDefault();
+      const p = { id: 'p-' + Date.now(), name: document.getElementById('npName').value, allocatedBudget: parseFloat(document.getElementById('npBudget').value) || 0, charter: {}, chapters: [{ id: 'ch-1', name: 'Phase 1', color: 'indigo' }], tasks: [], risks: [], issues: [], expenses: [] };
+      appData.projects.push(p);
+      appData.activeId = p.id;
+      closeModal('newProjectModal');
+      save();
+    }
+    function handleDeleteCurrentProject() {
+      if (!confirm("Delete project?")) return;
+      appData.projects = appData.projects.filter(p => p.id !== appData.activeId);
+      if (appData.projects.length === 0) appData.projects.push({ id: 'p-' + Date.now(), name: 'New Project', tasks: [], chapters: [] });
+      appData.activeId = appData.projects[0].id;
+      save();
+    }
+
+    function exportData() {
+      const a = document.createElement('a');
+      a.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appData));
+      a.download = `projecthub_cloud_backup_${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+    }
+    function importData(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const r = new FileReader();
+      r.onload = (ev) => {
+        try {
+          const parsed = JSON.parse(ev.target.result);
+          if (parsed && parsed.projects) { appData = parsed; save(); alert("Restored!"); }
+        } catch(err) { alert("Error: " + err.message); }
+      };
+      r.readAsText(file);
+    }
+
+    function switchTab(id) {
+      ['charter', 'chapters', 'tasks', 'gantt', 'risks', 'issues', 'budget'].forEach(t => {
+        document.getElementById(`view-${t}`).classList.add('hidden');
+        document.getElementById(`tab-${t}`).classList.remove('bg-indigo-600', 'text-white');
+        document.getElementById(`tab-${t}`).classList.add('text-slate-400');
+      });
+      document.getElementById(`view-${id}`).classList.remove('hidden');
+      document.getElementById(`tab-${id}`).classList.add('bg-indigo-600', 'text-white');
+      document.getElementById(`tab-${id}`).classList.remove('text-slate-400');
+      if (id === 'charter') renderCharter();
+      if (id === 'chapters') renderChapters();
+      if (id === 'gantt') renderGantt();
+      if (id === 'budget') renderBudget();
+      if (id === 'issues') renderIssues();
+    }
+
+    function switchProject(id) { appData.activeId = id; save(); }
+    function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+    function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+    function render() {
+      const proj = getActiveProject();
+      document.getElementById('projectSelect').innerHTML = appData.projects.map(p => `<option value="${p.id}" ${p.id === proj.id ? 'selected' : ''}>${p.name}</option>`).join('');
+      renderCharter();
+      renderChapters();
+      renderTasks();
+      renderGantt();
+      renderRisks();
+      renderIssues();
+      renderBudget();
+    }
+  </script>
+</body>
+</html>
