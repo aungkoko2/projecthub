@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ProjectHub - Enterprise Edition</title>
+  <title>ProjectHub - Fully Responsive Suite</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   
@@ -12,17 +12,17 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans">
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans antialiased">
 
   <!-- 1. AUTH SCREEN -->
   <div id="authScreen" class="fixed inset-0 bg-slate-950 flex items-center justify-center p-4 z-50">
-    <div class="bg-slate-900 border border-slate-800 p-8 rounded-2xl w-full max-w-sm shadow-2xl space-y-5">
+    <div class="bg-slate-900 border border-slate-800 p-6 sm:p-8 rounded-2xl w-full max-w-sm shadow-2xl space-y-5">
       <div class="text-center space-y-1">
         <div class="w-12 h-12 rounded-xl bg-indigo-600/20 text-indigo-400 flex items-center justify-center mx-auto text-2xl mb-3">
           <i class="fa-solid fa-cubes-stacked"></i>
         </div>
         <h2 class="text-xl font-bold">ProjectHub Access</h2>
-        <p class="text-xs text-slate-400">Restricted Workspace (Requires Approval)</p>
+        <p class="text-xs text-slate-400">Mobile & Desktop Workspace</p>
       </div>
 
       <form id="authForm" onsubmit="handleAuthSubmit(event)" class="space-y-3.5 text-xs">
@@ -44,7 +44,7 @@
 
   <!-- 2. PENDING APPROVAL SCREEN -->
   <div id="pendingScreen" class="hidden fixed inset-0 bg-slate-950 flex items-center justify-center p-4 z-50">
-    <div class="bg-slate-900 border border-slate-800 p-8 rounded-2xl w-full max-w-md shadow-2xl text-center space-y-4">
+    <div class="bg-slate-900 border border-slate-800 p-6 sm:p-8 rounded-2xl w-full max-w-md shadow-2xl text-center space-y-4">
       <div class="w-14 h-14 rounded-full bg-amber-500/10 text-amber-400 flex items-center justify-center mx-auto text-2xl">
         <i class="fa-solid fa-clock-rotate-left"></i>
       </div>
@@ -63,38 +63,41 @@
   <!-- 3. MAIN APP CONTAINER -->
   <div id="appContainer" class="hidden min-h-screen flex flex-col">
     <!-- Header -->
-    <header class="bg-slate-900 border-b border-slate-800 px-6 py-3 flex flex-wrap justify-between items-center gap-4">
-      <div class="flex items-center gap-3">
+    <header class="bg-slate-900 border-b border-slate-800 px-4 sm:px-6 py-3 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+      <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto justify-between">
         <div class="flex items-center gap-2">
           <i class="fa-solid fa-cubes-stacked text-indigo-400 text-xl"></i>
-          <h1 class="text-lg font-bold">ProjectHub <span id="syncBadge" class="text-xs bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded ml-1 flex items-center gap-1 inline-flex"><i class="fa-solid fa-cloud"></i> Sync</span></h1>
+          <h1 class="text-lg font-bold">ProjectHub <span id="syncBadge" class="text-xs bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded ml-1 inline-flex items-center gap-1"><i class="fa-solid fa-cloud"></i> Sync</span></h1>
         </div>
-        <div class="h-5 w-px bg-slate-800"></div>
         
-        <div class="flex items-center gap-2">
-          <select id="projectSelect" onchange="switchProject(this.value)" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm font-medium text-slate-200 focus:outline-none focus:border-indigo-500"></select>
-          
-          <button onclick="openModal('newProjectModal')" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 shadow transition">
-            <i class="fa-solid fa-folder-plus"></i> New Project
-          </button>
-
-          <button onclick="openAccessModal()" title="Manage Permissions" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-2.5 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-1">
-            <i class="fa-solid fa-user-shield text-indigo-400"></i> Access
-          </button>
-
-          <!-- Admin Approval Button -->
-          <button id="adminApprovalBtn" onclick="openApprovalModal()" class="hidden bg-amber-600 hover:bg-amber-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-1.5 shadow">
-            <i class="fa-solid fa-users-gear"></i> Users Approval <span id="pendingBadge" class="hidden bg-rose-600 text-white text-[9px] px-1.5 py-0.2 rounded-full font-bold">0</span>
-          </button>
-
-          <button onclick="handleDeleteCurrentProject()" title="Delete Project" class="bg-slate-800 hover:bg-rose-900/40 text-slate-400 hover:text-rose-400 border border-slate-700 px-2.5 py-1.5 rounded-lg text-xs font-medium transition">
-            <i class="fa-solid fa-trash-can"></i>
-          </button>
+        <!-- Mobile Profile Badge -->
+        <div class="flex sm:hidden items-center gap-2">
+          <button onclick="handleSignOut()" class="bg-slate-800 hover:bg-rose-950/40 text-rose-400 border border-slate-700 p-2 rounded-lg text-xs"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
         </div>
       </div>
 
-      <!-- User Profile & Sign Out -->
-      <div class="flex items-center gap-3">
+      <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+        <select id="projectSelect" onchange="switchProject(this.value)" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs sm:text-sm font-medium text-slate-200 focus:outline-none focus:border-indigo-500 flex-1 sm:flex-none"></select>
+        
+        <button onclick="openModal('newProjectModal')" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1 shadow transition">
+          <i class="fa-solid fa-folder-plus"></i> <span class="hidden xs:inline">New</span>
+        </button>
+
+        <button onclick="openAccessModal()" title="Manage Permissions" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-2.5 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-1">
+          <i class="fa-solid fa-user-shield text-indigo-400"></i> Access
+        </button>
+
+        <button id="adminApprovalBtn" onclick="openApprovalModal()" class="hidden bg-amber-600 hover:bg-amber-500 text-white px-2.5 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-1 shadow">
+          <i class="fa-solid fa-users-gear"></i> Approval <span id="pendingBadge" class="hidden bg-rose-600 text-white text-[9px] px-1.5 py-0.2 rounded-full font-bold">0</span>
+        </button>
+
+        <button onclick="handleDeleteCurrentProject()" title="Delete Project" class="bg-slate-800 hover:bg-rose-900/40 text-slate-400 hover:text-rose-400 border border-slate-700 px-2.5 py-1.5 rounded-lg text-xs font-medium transition">
+          <i class="fa-solid fa-trash-can"></i>
+        </button>
+      </div>
+
+      <!-- Desktop User Profile -->
+      <div class="hidden sm:flex items-center gap-3">
         <div class="text-right">
           <div id="userEmailBadge" class="text-xs font-semibold text-slate-200">user@example.com</div>
           <div id="roleBadge" class="text-[10px] text-indigo-400 font-mono">Owner</div>
@@ -105,26 +108,26 @@
       </div>
     </header>
 
-    <!-- Navigation Tabs -->
-    <div class="bg-slate-900/50 border-b border-slate-800 px-6 py-2 flex flex-wrap justify-between items-center gap-3">
-      <nav class="flex flex-wrap gap-1 bg-slate-800/80 p-1 rounded-xl border border-slate-700/60 text-xs">
-        <button onclick="switchTab('charter')" id="tab-charter" class="tab-btn px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5"><i class="fa-solid fa-scroll text-amber-400"></i>Charter</button>
-        <button onclick="switchTab('chapters')" id="tab-chapters" class="tab-btn px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5"><i class="fa-solid fa-book-bookmark text-cyan-400"></i>Chapters</button>
-        <button onclick="switchTab('tasks')" id="tab-tasks" class="tab-btn px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5"><i class="fa-solid fa-list-check"></i>Tasks & Kanban</button>
-        <button onclick="switchTab('gantt')" id="tab-gantt" class="tab-btn px-3 py-1.5 rounded-lg font-medium transition bg-indigo-600 text-white flex items-center gap-1.5"><i class="fa-solid fa-chart-gantt text-indigo-300"></i>Gantt</button>
-        <button onclick="switchTab('risks')" id="tab-risks" class="tab-btn px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5"><i class="fa-solid fa-triangle-exclamation text-amber-400"></i>Risks</button>
-        <button onclick="switchTab('issues')" id="tab-issues" class="tab-btn px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5"><i class="fa-solid fa-bug text-rose-400"></i>Issues</button>
-        <button onclick="switchTab('budget')" id="tab-budget" class="tab-btn px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5"><i class="fa-solid fa-wallet text-emerald-400"></i>Budget</button>
+    <!-- Navigation Tabs (Horizontal Scrollable on Mobile) -->
+    <div class="bg-slate-900/50 border-b border-slate-800 px-4 sm:px-6 py-2 flex flex-wrap justify-between items-center gap-3 overflow-x-auto">
+      <nav class="flex gap-1 bg-slate-800/80 p-1 rounded-xl border border-slate-700/60 text-xs shrink-0">
+        <button onclick="switchTab('charter')" id="tab-charter" class="tab-btn px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5 whitespace-nowrap"><i class="fa-solid fa-scroll text-amber-400"></i>Charter</button>
+        <button onclick="switchTab('chapters')" id="tab-chapters" class="tab-btn px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5 whitespace-nowrap"><i class="fa-solid fa-book-bookmark text-cyan-400"></i>Chapters</button>
+        <button onclick="switchTab('tasks')" id="tab-tasks" class="tab-btn px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5 whitespace-nowrap"><i class="fa-solid fa-list-check"></i>Kanban</button>
+        <button onclick="switchTab('gantt')" id="tab-gantt" class="tab-btn px-3 py-1.5 rounded-lg font-medium transition bg-indigo-600 text-white flex items-center gap-1.5 whitespace-nowrap"><i class="fa-solid fa-chart-gantt text-indigo-300"></i>Gantt</button>
+        <button onclick="switchTab('risks')" id="tab-risks" class="tab-btn px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5 whitespace-nowrap"><i class="fa-solid fa-triangle-exclamation text-amber-400"></i>Risks</button>
+        <button onclick="switchTab('issues')" id="tab-issues" class="tab-btn px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5 whitespace-nowrap"><i class="fa-solid fa-bug text-rose-400"></i>Issues</button>
+        <button onclick="switchTab('budget')" id="tab-budget" class="tab-btn px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5 whitespace-nowrap"><i class="fa-solid fa-wallet text-emerald-400"></i>Budget</button>
       </nav>
 
-      <div class="flex gap-2">
-        <button onclick="exportData()" title="Export JSON" class="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition"><i class="fa-solid fa-download text-indigo-400"></i> Export JSON</button>
-        <label title="Import JSON" class="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition cursor-pointer"><i class="fa-solid fa-upload text-emerald-400"></i> Import JSON<input id="importFileInput" type="file" onchange="importData(event)" class="hidden" accept=".json" /></label>
+      <div class="flex gap-2 shrink-0">
+        <button onclick="exportData()" title="Export JSON" class="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition"><i class="fa-solid fa-download text-indigo-400"></i> <span class="hidden xs:inline">Export</span></button>
+        <label title="Import JSON" class="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition cursor-pointer"><i class="fa-solid fa-upload text-emerald-400"></i> <span class="hidden xs:inline">Import</span><input id="importFileInput" type="file" onchange="importData(event)" class="hidden" accept=".json" /></label>
       </div>
     </div>
 
     <!-- Main Content Area -->
-    <main class="flex-1 p-6 max-w-7xl mx-auto w-full">
+    <main class="flex-1 p-4 sm:p-6 max-w-7xl mx-auto w-full">
       <!-- 1. CHARTER -->
       <section id="view-charter" class="hidden space-y-6">
         <div class="flex flex-wrap justify-between items-center gap-3 border-b border-slate-800 pb-4">
@@ -172,13 +175,13 @@
 
       <!-- 3. GANTT -->
       <section id="view-gantt" class="space-y-4">
-        <div class="bg-slate-900/70 border border-slate-800 rounded-xl p-5 space-y-4">
+        <div class="bg-slate-900/70 border border-slate-800 rounded-xl p-4 sm:p-5 space-y-4">
           <div class="flex flex-wrap justify-between items-center gap-3">
-            <div><h2 class="text-base font-bold text-slate-100 flex items-center gap-2"><i class="fa-solid fa-diagram-next text-indigo-400"></i> Dependency Timeline & Gantt Schedule</h2><p class="text-xs text-slate-400">Task ရှေ့နောက် အမှီအခိုများနှင့် ဇယားကွက်အချိန်ဇယား</p></div>
-            <div class="flex items-center gap-4 text-xs">
-              <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-rose-500/80 border border-rose-400 inline-block"></span> Blocked</span>
-              <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-blue-500 inline-block"></span> In Progress</span>
-              <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-emerald-500 inline-block"></span> Done</span>
+            <div><h2 class="text-base font-bold text-slate-100 flex items-center gap-2"><i class="fa-solid fa-diagram-next text-indigo-400"></i> Timeline & Gantt Schedule</h2><p class="text-xs text-slate-400">Task အမှီအခိုများနှင့် အချိန်ဇယား</p></div>
+            <div class="flex flex-wrap items-center gap-3 text-xs">
+              <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-rose-500/80 inline-block"></span> Blocked</span>
+              <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-blue-500 inline-block"></span> In Progress</span>
+              <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-emerald-500 inline-block"></span> Done</span>
               <button onclick="openAddTaskModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium"><i class="fa-solid fa-plus"></i> Add Task</button>
             </div>
           </div>
@@ -196,15 +199,15 @@
           <button onclick="openAddTaskModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium"><i class="fa-solid fa-plus"></i> Add Task</button>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-4 flex flex-col min-h-[400px]">
+          <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-4 flex flex-col min-h-[350px]">
             <div class="flex justify-between items-center pb-2 mb-3 border-b border-slate-800 font-semibold text-xs text-slate-300"><span>TO-DO</span><span id="count-todo" class="bg-slate-800 px-2 py-0.5 rounded font-mono">0</span></div>
             <div id="tasks-todo" class="space-y-3 flex-1 overflow-y-auto"></div>
           </div>
-          <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-4 flex flex-col min-h-[400px]">
+          <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-4 flex flex-col min-h-[350px]">
             <div class="flex justify-between items-center pb-2 mb-3 border-b border-slate-800 font-semibold text-xs text-blue-400"><span>IN PROGRESS</span><span id="count-inprogress" class="bg-slate-800 px-2 py-0.5 rounded font-mono">0</span></div>
             <div id="tasks-inprogress" class="space-y-3 flex-1 overflow-y-auto"></div>
           </div>
-          <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-4 flex flex-col min-h-[400px]">
+          <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-4 flex flex-col min-h-[350px]">
             <div class="flex justify-between items-center pb-2 mb-3 border-b border-slate-800 font-semibold text-xs text-emerald-400"><span>COMPLETED</span><span id="count-done" class="bg-slate-800 px-2 py-0.5 rounded font-mono">0</span></div>
             <div id="tasks-done" class="space-y-3 flex-1 overflow-y-auto"></div>
           </div>
@@ -952,7 +955,7 @@
       document.getElementById('expenseTableBody').innerHTML = (p.expenses || []).map(e => `<tr class="text-xs hover:bg-slate-800/20"><td class="py-2 px-3 text-slate-300">${e.name}</td><td class="py-2 px-3 font-mono text-amber-300">$${e.amount}</td><td class="py-2 px-3 text-right"><button onclick="getActiveProject().expenses = getActiveProject().expenses.filter(x=>x.id!=='${e.id}');saveToCloud();" class="text-slate-500 hover:text-rose-400"><i class="fa-solid fa-trash-can"></i></button></td></tr>`).join('');
     }
 
-    // --- SAFE PROJECT SWITCHER ---
+    // --- SAFE PROJECT SWITCHER FIX ---
     function switchProject(id) {
       if (!id) return;
       activeProjectId = id;
