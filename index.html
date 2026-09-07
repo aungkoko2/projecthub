@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ProjectHub - Admin Approval System</title>
+  <title>ProjectHub - Secure Admin Approval Suite</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   
@@ -50,7 +50,7 @@
       </div>
       <h2 class="text-lg font-bold text-slate-100">Pending Admin Approval</h2>
       <p class="text-xs text-slate-400 leading-relaxed">
-        သင့်အကောင့်ကို စာရင်းသွင်းပြီးပါပြီ။ သို့သော် လုံခြုံရေးအရ Workspace ထဲသို့ ဝင်ရောက်ရန် <strong class="text-indigo-400">Admin ၏ အတည်ပြုချက် (Approval)</strong> လိုအပ်ပါသည်။ Admin က ခွင့်ပြုပေးပြီးပါက စတင်အသုံးပြုနိုင်ပါမည်။
+        သင့်အကောင့်ကို စာရင်းသွင်းပြီးပါပြီ။ သို့သော် လုံခြုံရေးအရ Workspace ထဲသို့ ဝင်ရောက်ရန် <strong class="text-indigo-400">Admin (aungkoko.cs@gmail.com) ၏ အတည်ပြုချက် (Approval)</strong> လိုအပ်ပါသည်။ Admin က ခွင့်ပြုပေးပြီးပါက ဤစာမျက်နှာသည် အလိုအလျောက် ပွင့်သွားပါမည်။
       </p>
       <div class="pt-2 border-t border-slate-800">
         <button onclick="handleSignOut()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-lg text-xs font-semibold transition">
@@ -278,7 +278,7 @@
     </main>
   </div>
 
-  <!-- ADMIN USERS APPROVAL MODAL (NEW) -->
+  <!-- ADMIN USERS APPROVAL MODAL -->
   <div id="approvalModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
     <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 w-full max-w-lg shadow-2xl text-xs space-y-4">
       <div class="flex justify-between items-center border-b border-slate-800 pb-3">
@@ -424,12 +424,12 @@
     <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 w-full max-w-md shadow-2xl">
       <h3 class="text-base font-bold mb-4">Log Risk</h3>
       <form onsubmit="handleCreateRisk(event)" class="space-y-3 text-xs">
-        <input id="nrDesc" type="text" required placeholder="Risk description" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-white" />
+        <input id="nrDesc" type="text" required placeholder="Risk description" class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white" />
         <div class="grid grid-cols-2 gap-2">
-          <select id="nrImpact" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-white"><option value="Low">Low</option><option value="Medium">Medium</option><option value="High" selected>High</option></select>
-          <select id="nrLikelihood" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-white"><option value="Low">Low</option><option value="Medium">Medium</option><option value="High">High</option></select>
+          <select id="nrImpact" class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white"><option value="Low">Low</option><option value="Medium">Medium</option><option value="High" selected>High</option></select>
+          <select id="nrLikelihood" class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white"><option value="Low">Low</option><option value="Medium" selected>Medium</option><option value="High">High</option></select>
         </div>
-        <textarea id="nrMitigation" rows="2" placeholder="Mitigation plan" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-white"></textarea>
+        <textarea id="nrMitigation" rows="2" placeholder="Mitigation plan" class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white"></textarea>
         <div class="flex justify-end gap-2 pt-2 border-t border-slate-800"><button type="button" onclick="closeModal('riskModal')" class="px-3 py-1.5 text-slate-400">Cancel</button><button type="submit" class="bg-amber-600 px-4 py-1.5 rounded text-white">Add Risk</button></div>
       </form>
     </div>
@@ -469,34 +469,31 @@
     const dbRef = db.ref("project_hub_global_db");
     const usersRef = db.ref("project_hub_users");
 
-    // ==========================================
-    // ADMIN EMAIL သတ်မှတ်ချက် (သင့်အီးမေးလ် ထည့်သွင်းထားပါသည်)
-    // ==========================================
+    // Admin Email သတ်မှတ်ချက်
     const ADMIN_EMAIL = "aungkoko.cs@gmail.com";
 
     let currentUser = null;
     let authMode = 'login';
     let globalStore = { projects: [] };
-    let usersList = {}; // Registered users & approval state
+    let usersList = {};
     let activeProjectId = null;
 
-    // --- AUTH LISTENER WITH APPROVAL GATE ---
+    // --- ENFORCED APPROVAL AUTH GATEWAY ---
     auth.onAuthStateChanged(user => {
       currentUser = user;
       if (user) {
         document.getElementById("authScreen").classList.add("hidden");
         document.getElementById("userEmailBadge").innerText = user.email;
 
-        // Check if user is Super Admin or Approved
+        // Realtime check user approval status from database
         usersRef.on("value", snapshot => {
           usersList = snapshot.val() || {};
-          const userEmailClean = user.email.replace(/\./g, "_"); // Firebase key clean
+          const userEmailClean = user.email.toLowerCase().replace(/\./g, "_");
           const userRecord = usersList[userEmailClean];
-
           const isSuperAdmin = user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
 
-          // Super Admin is ALWAYS auto-approved
           if (isSuperAdmin) {
+            // Ensure admin is always approved in DB
             if (!userRecord || userRecord.status !== 'approved') {
               usersRef.child(userEmailClean).set({ email: user.email, status: 'approved', role: 'admin' });
             }
@@ -504,11 +501,20 @@
             return;
           }
 
-          // Normal User Check
+          // Regular User Checks
           if (userRecord && userRecord.status === 'approved') {
             showMainApp();
           } else {
-            // Not approved yet -> Show Pending Screen
+            // If user record doesn't exist yet, create as pending
+            if (!userRecord) {
+              usersRef.child(userEmailClean).set({
+                email: user.email,
+                status: 'pending',
+                role: 'member',
+                createdAt: new Date().toISOString()
+              });
+            }
+            // LOCK OUT AND SHOW PENDING SCREEN
             document.getElementById("appContainer").classList.add("hidden");
             document.getElementById("pendingScreen").classList.remove("hidden");
           }
@@ -524,7 +530,6 @@
       document.getElementById("pendingScreen").classList.add("hidden");
       document.getElementById("appContainer").classList.remove("hidden");
 
-      // Show Admin Button if Super Admin
       const isSuperAdmin = currentUser.email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
       if (isSuperAdmin) {
         document.getElementById("adminApprovalBtn").classList.remove("hidden");
@@ -544,8 +549,7 @@
       if (authMode === 'signup') {
         auth.createUserWithEmailAndPassword(email, pass)
           .then(res => {
-            // Register as pending in database
-            const userEmailClean = email.replace(/\./g, "_");
+            const userEmailClean = email.toLowerCase().replace(/\./g, "_");
             const isSuperAdmin = email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
             usersRef.child(userEmailClean).set({
               email: email,
@@ -564,7 +568,7 @@
       auth.signOut();
     }
 
-    // --- APPROVAL PANEL FUNCTIONS (ADMIN ONLY) ---
+    // --- APPROVAL PANEL (ADMIN ONLY) ---
     function openApprovalModal() {
       renderApprovalTable();
       openModal("approvalModal");
@@ -654,7 +658,6 @@
       dbRef.set(globalStore);
     }
 
-    // --- ACCESS CONTROL FILTERING ---
     function getPermittedProjects() {
       if (!currentUser) return [];
       const userEmail = currentUser.email.toLowerCase();
@@ -701,7 +704,6 @@
     function openAccessModal() {
       const proj = getActiveProject();
       if (!proj) return;
-
       const userEmail = currentUser.email.toLowerCase();
       const isOwner = proj.owner && proj.owner.toLowerCase() === userEmail;
 
@@ -718,12 +720,10 @@
     function renderCollaboratorsList() {
       const proj = getActiveProject();
       const listEl = document.getElementById("collaboratorsList");
-
       if (!proj.collaborators || proj.collaborators.length === 0) {
         listEl.innerHTML = `<div class="text-slate-500 italic">No external members added yet.</div>`;
         return;
       }
-
       listEl.innerHTML = proj.collaborators.map(email => `
         <div class="flex justify-between items-center bg-slate-950 px-3 py-1.5 rounded border border-slate-800">
           <span class="text-slate-200 font-mono">${email}</span>
@@ -737,17 +737,7 @@
       const emailInput = document.getElementById("newCollabEmail");
       const email = emailInput.value.trim().toLowerCase();
       const proj = getActiveProject();
-
-      if (email === proj.owner.toLowerCase()) {
-        alert("Owner ဖြစ်သူကို Collaborator ထပ်ထည့်စရာမလိုပါ။");
-        return;
-      }
-
-      if (proj.collaborators.includes(email)) {
-        alert("ဤ User အား ခွင့်ပြုချက်ပေးထားပြီး ဖြစ်ပါသည်။");
-        return;
-      }
-
+      if (email === proj.owner.toLowerCase() || proj.collaborators.includes(email)) return;
       proj.collaborators.push(email);
       emailInput.value = '';
       saveToCloud();
@@ -776,10 +766,7 @@
         allocatedBudget: budget,
         charter: {},
         chapters: [{ id: 'ch-' + Date.now(), name: 'Phase 1: Setup', color: 'indigo', desc: 'Kickoff' }],
-        tasks: [],
-        risks: [],
-        issues: [],
-        expenses: []
+        tasks: [], risks: [], issues: [], expenses: []
       };
 
       globalStore.projects.push(newProj);
@@ -791,16 +778,11 @@
 
     function handleDeleteCurrentProject() {
       const proj = getActiveProject();
-      if (!proj) return;
-
-      const userEmail = currentUser.email.toLowerCase();
-      if (proj.owner.toLowerCase() !== userEmail) {
-        alert("⚠️ သင်သည် ဤ Project ၏ Owner မဟုတ်သဖြင့် ဖျက်ပိုင်ခွင့် မရှိပါ။");
+      if (!proj || proj.owner.toLowerCase() !== currentUser.email.toLowerCase()) {
+        alert("⚠️ Owner သာ ဖျက်ပိုင်ခွင့်ရှိသည်။");
         return;
       }
-
-      if (!confirm(`"${proj.name}" ကို အပြီးတိုင် ဖျက်ပစ်မည်လား?`)) return;
-
+      if (!confirm(`"${proj.name}" ကို ဖျက်မည်လား?`)) return;
       globalStore.projects = globalStore.projects.filter(p => p.id !== proj.id);
       saveToCloud();
     }
@@ -816,51 +798,27 @@
     function importData(e) {
       const file = e.target.files[0];
       if (!file) return;
-
       const r = new FileReader();
       r.onload = ev => {
         try {
           const parsed = JSON.parse(ev.target.result);
-          let incomingProjects = [];
-
-          if (parsed && Array.isArray(parsed.projects)) {
-            incomingProjects = parsed.projects;
-          } else if (Array.isArray(parsed)) {
-            incomingProjects = parsed;
-          } else if (parsed && parsed.id && parsed.name) {
-            incomingProjects = [parsed];
-          }
-
-          if (incomingProjects.length > 0) {
-            const userEmail = currentUser.email;
-
-            incomingProjects.forEach(p => {
-              if (!p.owner) p.owner = userEmail;
-              if (!p.collaborators) p.collaborators = [];
-            });
-
-            incomingProjects.forEach(newP => {
-              const idx = globalStore.projects.findIndex(x => x.id === newP.id);
-              if (idx >= 0) {
-                globalStore.projects[idx] = newP;
-              } else {
-                globalStore.projects.push(newP);
-              }
-            });
-
-            activeProjectId = incomingProjects[0].id;
-            saveToCloud();
-            alert("JSON Data များကို အောင်မြင်စွာ သွင်းပြီးပါပြီ။");
-          }
-        } catch (err) {
-          alert("JSON ဖတ်မရပါ: " + err.message);
-        }
+          let incoming = parsed.projects || (Array.isArray(parsed) ? parsed : [parsed]);
+          incoming.forEach(p => { if (!p.owner) p.owner = currentUser.email; if (!p.collaborators) p.collaborators = []; });
+          incoming.forEach(newP => {
+            const idx = globalStore.projects.findIndex(x => x.id === newP.id);
+            if (idx >= 0) globalStore.projects[idx] = newP;
+            else globalStore.projects.push(newP);
+          });
+          activeProjectId = incoming[0].id;
+          saveToCloud();
+          alert("Imported successfully!");
+        } catch (err) { alert("Error: " + err.message); }
         e.target.value = '';
       };
       r.readAsText(file);
     }
 
-    // --- CHAPTERS ---
+    // --- CHAPTERS & TASKS ---
     function openAddChapterModal() {
       document.getElementById('editingChapterId').value = '';
       document.getElementById('chapterModalTitleText').innerText = 'Add Project Chapter';
@@ -872,10 +830,8 @@
     }
 
     function openEditChapterModal(chId) {
-      const proj = getActiveProject();
-      const chapter = proj.chapters.find(c => c.id === chId);
+      const chapter = getActiveProject().chapters.find(c => c.id === chId);
       if (!chapter) return;
-
       document.getElementById('editingChapterId').value = chapter.id;
       document.getElementById('chapterModalTitleText').innerText = 'Edit Project Chapter';
       document.getElementById('chapterModalSubmitBtn').innerText = 'Update Chapter';
@@ -887,31 +843,25 @@
 
     function handleSaveChapter(e) {
       e.preventDefault();
-      const editingId = document.getElementById('editingChapterId').value;
+      const id = document.getElementById('editingChapterId').value;
       const name = document.getElementById('nchName').value.trim();
       const color = document.getElementById('nchColor').value;
       const desc = document.getElementById('nchDesc').value.trim();
-      if (!name) return;
-
       const proj = getActiveProject();
-      if (editingId) {
-        const chapter = proj.chapters.find(c => c.id === editingId);
-        if (chapter) {
-          chapter.name = name;
-          chapter.color = color;
-          chapter.desc = desc;
-        }
+
+      if (id) {
+        const ch = proj.chapters.find(c => c.id === id);
+        if (ch) Object.assign(ch, { name, color, desc });
       } else {
         proj.chapters.push({ id: 'ch-' + Date.now(), name, color, desc });
       }
-
       closeModal('chapterModal');
       saveToCloud();
     }
 
     function deleteChapter(chId) {
       const proj = getActiveProject();
-      if (!confirm("ဒီ Chapter ကို ဖျက်ရန် သေချာပါသလား?")) return;
+      if (!confirm("Delete chapter?")) return;
       proj.chapters = proj.chapters.filter(c => c.id !== chId);
       proj.tasks.forEach(t => { if (t.chapterId === chId) t.chapterId = null; });
       saveToCloud();
@@ -921,102 +871,82 @@
       const proj = getActiveProject();
       const grid = document.getElementById('chaptersGrid');
       if (!proj) return;
-      
       if (!proj.chapters || proj.chapters.length === 0) {
-        grid.innerHTML = `<div class="col-span-full py-12 text-center text-slate-500 bg-slate-900/40 border border-slate-800 rounded-xl p-6">Chapter များ မရှိသေးပါ။</div>`;
+        grid.innerHTML = `<div class="col-span-full py-12 text-center text-slate-500 bg-slate-900/40 border border-slate-800 rounded-xl p-6">No chapters.</div>`;
         return;
       }
-
       grid.innerHTML = proj.chapters.map(ch => {
         const theme = getChapterColorClasses(ch.color);
         const chTasks = proj.tasks.filter(t => t.chapterId === ch.id);
-        const doneTasks = chTasks.filter(t => t.status === 'done').length;
-        const pct = chTasks.length ? Math.round((doneTasks / chTasks.length) * 100) : 0;
-
+        const done = chTasks.filter(t => t.status === 'done').length;
+        const pct = chTasks.length ? Math.round((done / chTasks.length) * 100) : 0;
         return `
           <div class="bg-slate-900 border ${theme.border} rounded-xl p-4 flex flex-col justify-between space-y-3 shadow">
             <div>
               <div class="flex justify-between items-start gap-2">
                 <span class="text-xs px-2 py-0.5 rounded font-medium ${theme.bg} ${theme.text} border ${theme.border}">${ch.name}</span>
                 <div class="flex items-center gap-1.5">
-                  <button onclick="openEditChapterModal('${ch.id}')" title="Edit Chapter" class="text-slate-500 hover:text-cyan-400 p-1 transition"><i class="fa-solid fa-pen-to-square text-xs"></i></button>
-                  <button onclick="deleteChapter('${ch.id}')" title="Delete Chapter" class="text-slate-500 hover:text-rose-400 p-1 transition"><i class="fa-regular fa-trash-can text-xs"></i></button>
+                  <button onclick="openEditChapterModal('${ch.id}')" class="text-slate-500 hover:text-cyan-400 p-1"><i class="fa-solid fa-pen-to-square text-xs"></i></button>
+                  <button onclick="deleteChapter('${ch.id}')" class="text-slate-500 hover:text-rose-400 p-1"><i class="fa-regular fa-trash-can text-xs"></i></button>
                 </div>
               </div>
-              <p class="text-xs text-slate-400 mt-2 line-clamp-2 leading-relaxed">${ch.desc || '-'}</p>
+              <p class="text-xs text-slate-400 mt-2">${ch.desc || '-'}</p>
             </div>
-            <div class="space-y-1.5 pt-2 border-t border-slate-800/80">
-              <div class="flex justify-between text-[11px] text-slate-400">
-                <span>Progress</span><span class="font-mono text-slate-200">${doneTasks}/${chTasks.length} (${pct}%)</span>
-              </div>
-              <div class="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
-                <div class="h-full rounded-full ${pct === 100 ? 'bg-emerald-400' : 'bg-indigo-500'}" style="width: ${pct}%"></div>
-              </div>
+            <div class="space-y-1.5 pt-2 border-t border-slate-800">
+              <div class="flex justify-between text-[11px] text-slate-400"><span>Progress</span><span class="font-mono text-slate-200">${done}/${chTasks.length} (${pct}%)</span></div>
+              <div class="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden"><div class="h-full rounded-full ${pct === 100 ? 'bg-emerald-400' : 'bg-indigo-500'}" style="width: ${pct}%"></div></div>
             </div>
           </div>
         `;
       }).join('');
     }
 
-    // --- TASKS ---
     function openAddTaskModal() {
       const proj = getActiveProject();
       if (!proj) return;
       document.getElementById('editingTaskId').value = '';
-      document.getElementById('taskModalTitleText').innerText = 'Create Task & Dependency';
+      document.getElementById('taskModalTitleText').innerText = 'Create Task';
       document.getElementById('taskModalSubmitBtn').innerText = 'Save Task';
       document.getElementById('ntTitle').value = '';
       document.getElementById('ntDesc').value = '';
       document.getElementById('ntStartDate').value = '';
       document.getElementById('ntEndDate').value = '';
       document.getElementById('ntPriority').value = 'Medium';
-      
       populateChapterDropdown();
       populateDependencyDropdown();
       openModal('taskModal');
     }
 
-    function openEditTaskModal(taskId) {
-      const proj = getActiveProject();
-      const task = proj.tasks.find(t => t.id === taskId);
+    function openEditTaskModal(id) {
+      const task = getActiveProject().tasks.find(t => t.id === id);
       if (!task) return;
-
       document.getElementById('editingTaskId').value = task.id;
-      document.getElementById('taskModalTitleText').innerText = 'Edit Task Details';
+      document.getElementById('taskModalTitleText').innerText = 'Edit Task';
       document.getElementById('taskModalSubmitBtn').innerText = 'Update Changes';
       document.getElementById('ntTitle').value = task.title;
       document.getElementById('ntDesc').value = task.desc || '';
       document.getElementById('ntStartDate').value = task.startDate;
       document.getElementById('ntEndDate').value = task.endDate;
       document.getElementById('ntPriority').value = task.priority || 'Medium';
-
       populateChapterDropdown(task.chapterId);
       populateDependencyDropdown(task.id);
       document.getElementById('ntDependency').value = task.dependsOn || '';
       openModal('taskModal');
     }
 
-    function populateDependencyDropdown(excludeTaskId = null) {
+    function populateDependencyDropdown(excludeId = null) {
       const proj = getActiveProject();
-      const select = document.getElementById('ntDependency');
-      const validTasks = proj.tasks.filter(t => t.id !== excludeTaskId);
-      select.innerHTML = '<option value="">None (Independent Task)</option>' + 
-        validTasks.map(t => `<option value="${t.id}">${t.title}</option>`).join('');
+      document.getElementById('ntDependency').innerHTML = '<option value="">None</option>' + proj.tasks.filter(t => t.id !== excludeId).map(t => `<option value="${t.id}">${t.title}</option>`).join('');
     }
 
-    function populateChapterDropdown(selectedChapterId = null) {
+    function populateChapterDropdown(selectedId = null) {
       const proj = getActiveProject();
-      const select = document.getElementById('ntChapter');
-      let html = '<option value="">None (General / Unassigned)</option>';
-      proj.chapters.forEach(ch => {
-        html += `<option value="${ch.id}" ${ch.id === selectedChapterId ? 'selected' : ''}>${ch.name}</option>`;
-      });
-      select.innerHTML = html;
+      document.getElementById('ntChapter').innerHTML = '<option value="">General</option>' + proj.chapters.map(c => `<option value="${c.id}" ${c.id === selectedId ? 'selected' : ''}>${c.name}</option>`).join('');
     }
 
     function handleSaveTask(e) {
       e.preventDefault();
-      const editingId = document.getElementById('editingTaskId').value;
+      const id = document.getElementById('editingTaskId').value;
       const title = document.getElementById('ntTitle').value.trim();
       const chapterId = document.getElementById('ntChapter').value || null;
       const desc = document.getElementById('ntDesc').value.trim();
@@ -1024,17 +954,14 @@
       const endDate = document.getElementById('ntEndDate').value;
       const dependsOn = document.getElementById('ntDependency').value || null;
       const priority = document.getElementById('ntPriority').value;
-
-      if (!title || !startDate || !endDate) return;
-
       const proj = getActiveProject();
-      if (editingId) {
-        const task = proj.tasks.find(t => t.id === editingId);
-        if (task) Object.assign(task, { title, chapterId, desc, startDate, endDate, dependsOn, priority });
+
+      if (id) {
+        const t = proj.tasks.find(x => x.id === id);
+        if (t) Object.assign(t, { title, chapterId, desc, startDate, endDate, dependsOn, priority });
       } else {
         proj.tasks.push({ id: 't-' + Date.now(), title, chapterId, desc, status: 'todo', priority, startDate, endDate, dependsOn });
       }
-
       closeModal('taskModal');
       saveToCloud();
     }
@@ -1046,83 +973,63 @@
       return { blocked: true, blockerName: prereq.title };
     }
 
-    function setTaskStatus(taskId, targetStatus) {
+    function setTaskStatus(id, status) {
       const proj = getActiveProject();
-      const task = proj.tasks.find(t => t.id === taskId);
+      const task = proj.tasks.find(t => t.id === id);
       if (!task) return;
-
-      if (targetStatus !== 'todo') {
+      if (status !== 'todo') {
         const { blocked, blockerName } = isTaskBlocked(task, proj);
-        if (blocked) {
-          alert(`⚠️ Action Blocked!\n\nPrerequisite Task ဖြစ်သော "${blockerName}" ပြီးမှ လုပ်ဆောင်နိုင်ပါမည်။`);
-          return;
-        }
+        if (blocked) { alert(`Blocked by: "${blockerName}"`); return; }
       }
-
-      task.status = targetStatus;
+      task.status = status;
       saveToCloud();
     }
 
-    function deleteTask(taskId) {
+    function deleteTask(id) {
       const proj = getActiveProject();
-      if (!confirm("ဒီ Task ကို ဖျက်ရန် သေချာပါသလား?")) return;
-      proj.tasks.forEach(t => { if (t.dependsOn === taskId) t.dependsOn = null; });
-      proj.tasks = proj.tasks.filter(t => t.id !== taskId);
+      if (!confirm("Delete task?")) return;
+      proj.tasks.forEach(t => { if (t.dependsOn === id) t.dependsOn = null; });
+      proj.tasks = proj.tasks.filter(t => t.id !== id);
       saveToCloud();
     }
 
-    // --- KANBAN RENDER ---
     function renderTasks() {
       const proj = getActiveProject();
       if (!proj) return;
-
-      const filterSelect = document.getElementById('kanbanChapterFilter');
-      const selectedChapter = filterSelect ? filterSelect.value : 'all';
-
-      if (filterSelect) {
-        let filterHtml = '<option value="all">All Chapters</option>';
-        proj.chapters.forEach(ch => {
-          filterHtml += `<option value="${ch.id}" ${ch.id === selectedChapter ? 'selected' : ''}>${ch.name}</option>`;
-        });
-        filterSelect.innerHTML = filterHtml;
-      }
-
+      const filter = document.getElementById('kanbanChapterFilter').value;
       const cols = { todo: document.getElementById('tasks-todo'), inprogress: document.getElementById('tasks-inprogress'), done: document.getElementById('tasks-done') };
       Object.values(cols).forEach(c => c.innerHTML = '');
-
       let counts = { todo: 0, inprogress: 0, done: 0 };
-      const filteredTasks = selectedChapter === 'all' ? proj.tasks : proj.tasks.filter(t => t.chapterId === selectedChapter);
 
-      filteredTasks.forEach(task => {
+      const filtered = filter === 'all' || !filter ? proj.tasks : proj.tasks.filter(t => t.chapterId === filter);
+
+      filtered.forEach(task => {
         counts[task.status] = (counts[task.status] || 0) + 1;
-        const { blocked, blockerName } = isTaskBlocked(task, proj);
-        const parentTask = task.dependsOn ? proj.tasks.find(t => t.id === task.dependsOn) : null;
+        const { blocked } = isTaskBlocked(task, proj);
         const chapter = task.chapterId ? proj.chapters.find(c => c.id === task.chapterId) : null;
-        const chapterTheme = chapter ? getChapterColorClasses(chapter.color) : null;
+        const theme = chapter ? getChapterColorClasses(chapter.color) : null;
 
         const card = document.createElement('div');
-        card.className = `border rounded-lg p-3 text-xs shadow space-y-2.5 transition ${blocked ? 'bg-slate-900/90 border-rose-500/40' : 'bg-slate-800/90 border-slate-700/60'}`;
+        card.className = `border rounded-lg p-3 text-xs shadow space-y-2 ${blocked ? 'bg-slate-900/90 border-rose-500/40' : 'bg-slate-800/90 border-slate-700/60'}`;
         card.innerHTML = `
           <div class="flex justify-between items-start gap-2">
             <div>
               <span class="font-medium ${blocked ? 'text-rose-200' : 'text-slate-200'}">${task.title}</span>
-              ${chapter ? `<div class="mt-1"><span class="text-[10px] px-1.5 py-0.5 rounded font-medium ${chapterTheme.bg} ${chapterTheme.text} border ${chapterTheme.border}"><i class="fa-solid fa-book-bookmark text-[8px] mr-1"></i>${chapter.name}</span></div>` : ''}
+              ${chapter ? `<div class="mt-1"><span class="text-[10px] px-1.5 py-0.5 rounded font-medium ${theme.bg} ${theme.text} border ${theme.border}">${chapter.name}</span></div>` : ''}
             </div>
-            <div class="flex items-center gap-2">
-              <button onclick="openEditTaskModal('${task.id}')" title="Edit Task" class="text-slate-500 hover:text-indigo-400 transition"><i class="fa-solid fa-pen-to-square"></i></button>
-              <button onclick="deleteTask('${task.id}')" title="Delete Task" class="text-slate-500 hover:text-rose-400 transition"><i class="fa-regular fa-trash-can"></i></button>
+            <div class="flex gap-1.5">
+              <button onclick="openEditTaskModal('${task.id}')" class="text-slate-400 hover:text-indigo-400"><i class="fa-solid fa-pen-to-square"></i></button>
+              <button onclick="deleteTask('${task.id}')" class="text-slate-400 hover:text-rose-400"><i class="fa-regular fa-trash-can"></i></button>
             </div>
           </div>
-          ${task.desc ? `<div class="bg-slate-950/70 border border-slate-800/80 rounded p-2 text-[11px] text-slate-300 whitespace-pre-wrap leading-relaxed max-h-24 overflow-y-auto">${task.desc}</div>` : ''}
-          ${parentTask ? `<div class="p-1.5 rounded text-[11px] flex items-center gap-1.5 ${blocked ? 'bg-rose-500/10 text-rose-300 border border-rose-500/20' : 'bg-slate-900 text-slate-400 border border-slate-800'}"><i class="fa-solid ${blocked ? 'fa-lock text-rose-400' : 'fa-lock-open text-emerald-400'} text-[10px]"></i><span class="truncate">Requires: <strong>${parentTask.title}</strong></span></div>` : ''}
-          <div class="text-[10px] text-slate-400 flex items-center justify-between pt-1 border-t border-slate-700/40">
-            <span><i class="fa-regular fa-calendar mr-1"></i>${task.startDate} &rarr; ${task.endDate}</span>
-            <span class="px-1.5 py-0.5 rounded font-mono ${task.priority === 'High' ? 'bg-rose-500/20 text-rose-300' : task.priority === 'Medium' ? 'bg-amber-500/20 text-amber-300' : 'bg-emerald-500/20 text-emerald-300'}">${task.priority}</span>
-          </div>
-          <div class="flex justify-end gap-1 pt-1">
-            ${task.status !== 'todo' ? `<button onclick="setTaskStatus('${task.id}', 'todo')" class="px-2 py-1 bg-slate-700 rounded text-[10px]">&larr;</button>` : ''}
-            ${task.status !== 'inprogress' ? `<button onclick="setTaskStatus('${task.id}', 'inprogress')" class="px-2 py-1 rounded text-[10px] font-medium ${blocked ? 'bg-slate-800 text-slate-500' : 'bg-blue-600 text-white'}">${blocked ? 'Blocked' : 'Start'}</button>` : ''}
-            ${task.status !== 'done' ? `<button onclick="setTaskStatus('${task.id}', 'done')" class="px-2 py-1 rounded text-[10px] font-medium ${blocked ? 'bg-slate-800 text-slate-500' : 'bg-emerald-600 text-white'}">Done</button>` : ''}
+          ${task.desc ? `<div class="bg-slate-950 p-1.5 rounded text-[11px] text-slate-400">${task.desc}</div>` : ''}
+          <div class="flex justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-700">
+            <span>${task.startDate}</span>
+            <div class="flex gap-1">
+              ${task.status !== 'todo' ? `<button onclick="setTaskStatus('${task.id}', 'todo')" class="px-1 bg-slate-700 rounded">&larr;</button>` : ''}
+              ${task.status !== 'inprogress' ? `<button onclick="setTaskStatus('${task.id}', 'inprogress')" class="px-1.5 py-0.5 rounded ${blocked ? 'bg-slate-800 text-slate-500' : 'bg-blue-600 text-white'}">${blocked ? 'Locked' : 'Start'}</button>` : ''}
+              ${task.status !== 'done' ? `<button onclick="setTaskStatus('${task.id}', 'done')" class="px-1.5 py-0.5 rounded ${blocked ? 'bg-slate-800 text-slate-500' : 'bg-emerald-600 text-white'}">Done</button>` : ''}
+            </div>
           </div>
         `;
         if (cols[task.status]) cols[task.status].appendChild(card);
@@ -1133,85 +1040,45 @@
       document.getElementById('count-done').innerText = counts.done;
     }
 
-    // --- GANTT ENGINE ---
     function renderGantt() {
       const proj = getActiveProject();
       const container = document.getElementById('gantt-chart-wrapper');
-      if (!proj) return;
-
-      if (!proj.tasks || proj.tasks.length === 0) {
-        container.innerHTML = '<div class="text-center py-10 text-slate-500 text-xs">No tasks scheduled yet.</div>';
+      if (!proj || !proj.tasks || proj.tasks.length === 0) {
+        container.innerHTML = '<div class="text-center py-6 text-slate-500 text-xs">No tasks.</div>';
         return;
       }
-
       const allDates = [];
-      proj.tasks.forEach(t => {
-        if (t.startDate) allDates.push(new Date(t.startDate).getTime());
-        if (t.endDate) allDates.push(new Date(t.endDate).getTime());
-      });
+      proj.tasks.forEach(t => { if (t.startDate) allDates.push(new Date(t.startDate).getTime()); if (t.endDate) allDates.push(new Date(t.endDate).getTime()); });
+      const minTime = Math.min(...allDates) - 86400000;
+      const maxTime = Math.max(...allDates) + 86400000 * 2;
+      const span = maxTime - minTime;
+      const days = Math.ceil(span / 86400000);
 
-      const today = new Date();
-      allDates.push(today.getTime());
-
-      const minTime = Math.min(...allDates) - (1 * 86400000);
-      const maxTime = Math.max(...allDates) + (2 * 86400000);
-      const totalSpan = maxTime - minTime;
-      const dayCount = Math.ceil(totalSpan / 86400000);
-
-      let headerDaysHtml = '';
-      for (let i = 0; i < dayCount; i++) {
+      let header = '';
+      for (let i = 0; i < days; i++) {
         const d = new Date(minTime + (i * 86400000));
-        headerDaysHtml += `<div class="flex-1 text-center py-2 text-[10px] font-mono border-r border-slate-800 ${d.toDateString() === today.toDateString() ? 'bg-indigo-950/40 text-indigo-300 font-bold' : 'text-slate-400'}">${d.getMonth() + 1}/${d.getDate()}</div>`;
+        header += `<div class="flex-1 text-center py-1 text-[9px] border-r border-slate-800 text-slate-400 font-mono">${d.getMonth()+1}/${d.getDate()}</div>`;
       }
 
-      let rowsHtml = '';
-      proj.tasks.forEach(task => {
+      let rows = proj.tasks.map(task => {
         const sTime = new Date(task.startDate).getTime();
         const eTime = new Date(task.endDate).getTime();
-        const leftPct = Math.max(0, Math.min(100, ((sTime - minTime) / totalSpan) * 100));
-        const widthPct = Math.max(2, Math.min(100 - leftPct, ((eTime - sTime + 86400000) / totalSpan) * 100));
+        const left = Math.max(0, Math.min(100, ((sTime - minTime) / span) * 100));
+        const width = Math.max(2, Math.min(100 - left, ((eTime - sTime + 86400000) / span) * 100));
+        const { blocked } = isTaskBlocked(task, proj);
+        const color = task.status === 'done' ? 'bg-emerald-500 text-emerald-950 font-bold' : (blocked ? 'bg-rose-500/80 text-white' : 'bg-blue-500 text-blue-950');
 
-        const { blocked, blockerName } = isTaskBlocked(task, proj);
-        const parentTask = task.dependsOn ? proj.tasks.find(t => t.id === task.dependsOn) : null;
-        const chapter = task.chapterId ? proj.chapters.find(c => c.id === task.chapterId) : null;
-        const chapterTheme = chapter ? getChapterColorClasses(chapter.color) : null;
-
-        let barColor = 'bg-slate-600 text-slate-200';
-        if (task.status === 'done') barColor = 'bg-emerald-500 text-emerald-950 font-bold';
-        else if (blocked) barColor = 'bg-rose-500/80 text-white border border-rose-400 border-dashed';
-        else if (task.status === 'inprogress') barColor = 'bg-blue-500 text-blue-950 font-bold';
-
-        rowsHtml += `
-          <div class="flex items-center border-b border-slate-800/60 hover:bg-slate-900/30 transition py-2 group">
-            <div class="w-80 shrink-0 px-3 text-xs flex flex-col gap-0.5">
-              <div class="flex items-center justify-between">
-                <div class="flex items-center gap-1.5 truncate max-w-[200px]">
-                  <span class="truncate font-medium ${blocked ? 'text-rose-300' : 'text-slate-200'}">${task.title}</span>
-                  ${task.desc ? `<i class="fa-regular fa-note-sticky text-[10px] text-slate-400" title="${task.desc}"></i>` : ''}
-                  <button onclick="openEditTaskModal('${task.id}')" class="text-slate-500 hover:text-indigo-400 transition ml-1"><i class="fa-solid fa-pen-to-square text-[11px]"></i></button>
-                </div>
-                <span class="text-[10px] px-1.5 py-0.2 rounded font-mono ${task.status === 'done' ? 'text-emerald-400 bg-emerald-500/10' : blocked ? 'text-rose-400 bg-rose-500/10' : task.status === 'inprogress' ? 'text-blue-400 bg-blue-500/10' : 'text-slate-400'}">${blocked ? 'BLOCKED' : task.status}</span>
-              </div>
-              <div class="text-[10px] flex items-center justify-between text-slate-400">
-                <div class="truncate max-w-[150px]">${chapter ? `<span class="px-1.5 py-0.2 rounded text-[9px] ${chapterTheme.bg} ${chapterTheme.text}"><i class="fa-solid fa-bookmark text-[8px] mr-0.5"></i>${chapter.name}</span>` : '<span class="text-slate-600 text-[9px]">General</span>'}</div>
-                ${parentTask ? `<span class="truncate text-[9px] ${blocked ? 'text-rose-400' : 'text-slate-500'}">Blocked by: ${parentTask.title}</span>` : ''}
-              </div>
-            </div>
-            <div class="flex-1 relative h-7">
-              <div onclick="openEditTaskModal('${task.id}')" class="cursor-pointer absolute top-1/2 -translate-y-1/2 h-5 rounded text-[10px] px-2 flex items-center justify-between shadow-md ${barColor}" style="left: ${leftPct}%; width: ${widthPct}%;" title="${task.title}">
-                <span class="truncate">${task.title}</span>
-                ${blocked ? '<i class="fa-solid fa-lock text-[10px] ml-1 shrink-0"></i>' : ''}
-              </div>
+        return `
+          <div class="flex items-center border-b border-slate-800/50 py-1 hover:bg-slate-900/30 text-xs">
+            <div class="w-64 truncate text-slate-300 px-2">${task.title}</div>
+            <div class="flex-1 relative h-6">
+              <div onclick="openEditTaskModal('${task.id}')" class="cursor-pointer absolute top-1/2 -translate-y-1/2 h-4 rounded text-[9px] px-1.5 flex items-center truncate ${color}" style="left:${left}%; width:${width}%;">${task.title}</div>
             </div>
           </div>
         `;
-      });
+      }).join('');
 
-      const todayPct = Math.max(0, Math.min(100, ((today.getTime() - minTime) / totalSpan) * 100));
-      container.innerHTML = `
-        <div class="flex border-b border-slate-800 bg-slate-900 text-slate-300"><div class="w-80 shrink-0 px-3 py-2 text-xs font-bold border-r border-slate-800">Task Hierarchy & Chapter</div><div class="flex-1 flex relative">${headerDaysHtml}</div></div>
-        <div class="relative"><div class="absolute top-0 bottom-0 z-20 pointer-events-none" style="left: calc(20rem + (100% - 20rem) * ${todayPct / 100});"><div class="h-full border-r-2 border-rose-500/60 border-dashed"></div></div>${rowsHtml}</div>
-      `;
+      container.innerHTML = `<div class="flex border-b border-slate-800 bg-slate-900 text-slate-300 font-bold text-xs"><div class="w-64 px-2 py-1 border-r border-slate-800">Task</div><div class="flex-1 flex">${header}</div></div>${rows}`;
     }
 
     // --- CHARTER, RISKS, ISSUES, BUDGET ---
@@ -1240,38 +1107,23 @@
         handover: document.getElementById('charterHandover').value
       };
       saveToCloud();
-      alert("Project Charter saved!");
+      alert("Charter saved!");
     }
 
     function handleCreateRisk(e) {
       e.preventDefault();
-      const desc = document.getElementById('nrDesc').value.trim();
-      const impact = document.getElementById('nrImpact').value;
-      const likelihood = document.getElementById('nrLikelihood').value;
-      const mitigation = document.getElementById('nrMitigation').value.trim();
-      if (!desc) return;
-      getActiveProject().risks.push({ id: 'r-' + Date.now(), desc, impact, likelihood, mitigation });
+      getActiveProject().risks.push({ id: 'r-' + Date.now(), desc: document.getElementById('nrDesc').value, impact: document.getElementById('nrImpact').value, likelihood: document.getElementById('nrLikelihood').value, mitigation: document.getElementById('nrMitigation').value });
       closeModal('riskModal');
       saveToCloud();
     }
-
-    function deleteRisk(id) {
-      getActiveProject().risks = getActiveProject().risks.filter(r => r.id !== id);
-      saveToCloud();
-    }
-
+    function deleteRisk(id) { getActiveProject().risks = getActiveProject().risks.filter(r => r.id !== id); saveToCloud(); }
     function renderRisks() {
       const proj = getActiveProject();
-      const tbody = document.getElementById('riskTableBody');
-      if (!proj || !proj.risks || proj.risks.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-slate-500">No risks identified.</td></tr>`;
-        return;
-      }
-      tbody.innerHTML = proj.risks.map(r => `
-        <tr class="hover:bg-slate-800/30">
-          <td class="py-2.5 px-4 font-medium text-slate-200">${r.desc}</td>
-          <td class="py-2.5 px-4"><span class="px-2 py-0.5 rounded text-[10px] ${r.impact === 'High' ? 'bg-rose-500/20 text-rose-300' : 'bg-amber-500/20 text-amber-300'}">${r.impact}</span></td>
-          <td class="py-2.5 px-4 text-slate-400">${r.likelihood}</td>
+      document.getElementById('riskTableBody').innerHTML = (proj ? proj.risks : []).map(r => `
+        <tr class="hover:bg-slate-800/30 text-xs">
+          <td class="py-2.5 px-4 text-slate-200">${r.desc}</td>
+          <td class="py-2.5 px-4 text-rose-400 font-bold">${r.impact}</td>
+          <td class="py-2.5 px-4 text-slate-400">${r.likelihood || '-'}</td>
           <td class="py-2.5 px-4 text-slate-300">${r.mitigation || '-'}</td>
           <td class="py-2.5 px-4 text-right"><button onclick="deleteRisk('${r.id}')" class="text-slate-500 hover:text-rose-400"><i class="fa-regular fa-trash-can"></i></button></td>
         </tr>
@@ -1280,107 +1132,51 @@
 
     function handleCreateIssue(e) {
       e.preventDefault();
-      const desc = document.getElementById('niDesc').value.trim();
-      const severity = document.getElementById('niSeverity').value;
-      const status = document.getElementById('niStatus').value;
-      const owner = document.getElementById('niOwner').value.trim() || 'Unassigned';
-      const notes = document.getElementById('niNotes').value.trim();
-      if (!desc) return;
-      getActiveProject().issues.push({ id: 'iss-' + Date.now(), desc, severity, status, owner, notes });
+      getActiveProject().issues.push({ id: 'iss-' + Date.now(), desc: document.getElementById('niDesc').value, severity: document.getElementById('niSeverity').value, status: document.getElementById('niStatus').value, owner: document.getElementById('niOwner').value, notes: document.getElementById('niNotes').value });
       closeModal('issueModal');
       saveToCloud();
     }
-
-    function updateIssueStatus(issueId, newStatus) {
-      const issue = getActiveProject().issues.find(i => i.id === issueId);
-      if (issue) { issue.status = newStatus; saveToCloud(); }
-    }
-
-    function deleteIssue(issueId) {
-      getActiveProject().issues = getActiveProject().issues.filter(i => i.id !== issueId);
-      saveToCloud();
-    }
-
+    function updateIssueStatus(id, s) { getActiveProject().issues.find(i => i.id === id).status = s; saveToCloud(); }
+    function deleteIssue(id) { getActiveProject().issues = getActiveProject().issues.filter(i => i.id !== id); saveToCloud(); }
     function renderIssues() {
       const proj = getActiveProject();
-      const tbody = document.getElementById('issueTableBody');
-      if (!proj || !proj.issues || proj.issues.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="py-5 text-center text-slate-500">No issues logged yet.</td></tr>`;
-        return;
-      }
-      tbody.innerHTML = proj.issues.map(iss => {
-        const sevColor = { Critical: 'bg-rose-600/20 text-rose-300', High: 'bg-orange-500/20 text-orange-300', Medium: 'bg-amber-500/20 text-amber-300', Low: 'bg-slate-700/50 text-slate-300' }[iss.severity] || 'bg-slate-700';
-        return `
-          <tr class="hover:bg-slate-800/30 transition">
-            <td class="py-2.5 px-4 font-medium text-slate-200">${iss.desc}</td>
-            <td class="py-2.5 px-4"><span class="px-2 py-0.5 rounded text-[10px] font-mono ${sevColor}">${iss.severity}</span></td>
-            <td class="py-2.5 px-4">
-              <select onchange="updateIssueStatus('${iss.id}', this.value)" class="bg-slate-950 border border-slate-800 rounded px-2 py-1 text-xs focus:outline-none">
-                <option value="Open" ${iss.status === 'Open' ? 'selected' : ''}>Open</option><option value="Investigating" ${iss.status === 'Investigating' ? 'selected' : ''}>Investigating</option><option value="Resolved" ${iss.status === 'Resolved' ? 'selected' : ''}>Resolved</option>
-              </select>
-            </td>
-            <td class="py-2.5 px-4 text-slate-400">${iss.owner}</td>
-            <td class="py-2.5 px-4 text-slate-300 max-w-xs truncate">${iss.notes || '-'}</td>
-            <td class="py-2.5 px-4 text-right"><button onclick="deleteIssue('${iss.id}')" class="text-slate-500 hover:text-rose-400 p-1"><i class="fa-regular fa-trash-can"></i></button></td>
-          </tr>
-        `;
-      }).join('');
+      document.getElementById('issueTableBody').innerHTML = (proj ? proj.issues : []).map(i => `
+        <tr class="hover:bg-slate-800/30 text-xs">
+          <td class="py-2.5 px-4 text-slate-200">${i.desc}</td>
+          <td class="py-2.5 px-4 text-amber-400">${i.severity}</td>
+          <td class="py-2.5 px-4"><select onchange="updateIssueStatus('${i.id}', this.value)" class="bg-slate-950 border border-slate-800 rounded px-2 py-1 text-xs"><option value="Open" ${i.status==='Open'?'selected':''}>Open</option><option value="Investigating" ${i.status==='Investigating'?'selected':''}>Investigating</option><option value="Resolved" ${i.status==='Resolved'?'selected':''}>Resolved</option></select></td>
+          <td class="py-2.5 px-4 text-slate-400">${i.owner}</td>
+          <td class="py-2.5 px-4 text-slate-300">${i.notes || '-'}</td>
+          <td class="py-2.5 px-4 text-right"><button onclick="deleteIssue('${i.id}')" class="text-slate-500 hover:text-rose-400"><i class="fa-regular fa-trash-can"></i></button></td>
+        </tr>
+      `).join('');
     }
 
-    function saveAllocatedBudget() {
-      const val = parseFloat(document.getElementById('budgetTotalInput').value);
-      if (isNaN(val) || val < 0) return;
-      getActiveProject().allocatedBudget = val;
-      saveToCloud();
-    }
-
+    function saveAllocatedBudget() { getActiveProject().allocatedBudget = parseFloat(document.getElementById('budgetTotalInput').value) || 0; saveToCloud(); }
     function addExpense(e) {
       e.preventDefault();
-      const name = document.getElementById('expName').value.trim();
-      const amount = parseFloat(document.getElementById('expAmount').value);
-      if (!name || isNaN(amount) || amount <= 0) return;
-      getActiveProject().expenses.push({ id: 'exp-' + Date.now(), name, amount });
+      getActiveProject().expenses.push({ id: 'exp-' + Date.now(), name: document.getElementById('expName').value, amount: parseFloat(document.getElementById('expAmount').value) || 0 });
       document.getElementById('expName').value = ''; document.getElementById('expAmount').value = '';
       saveToCloud();
     }
-
-    function deleteExpense(expId) {
-      getActiveProject().expenses = getActiveProject().expenses.filter(e => e.id !== expId);
-      saveToCloud();
-    }
-
+    function deleteExpense(id) { getActiveProject().expenses = getActiveProject().expenses.filter(e => e.id !== id); saveToCloud(); }
     function renderBudget() {
-      const proj = getActiveProject();
-      if (!proj) return;
-      const totalSpent = proj.expenses.reduce((acc, curr) => acc + Number(curr.amount), 0);
-      const allocated = Number(proj.allocatedBudget) || 0;
-      const remaining = allocated - totalSpent;
-
+      const p = getActiveProject();
+      if (!p) return;
+      const spent = (p.expenses || []).reduce((a, b) => a + Number(b.amount), 0);
+      const allocated = Number(p.allocatedBudget) || 0;
       document.getElementById('budgetTotalInput').value = allocated;
       document.getElementById('budget-allocated-view').innerText = `$${allocated.toLocaleString()}`;
-      document.getElementById('budget-spent-view').innerText = `$${totalSpent.toLocaleString()}`;
-      const remEl = document.getElementById('budget-remaining-view');
-      remEl.innerText = `$${remaining.toLocaleString()}`;
-      remEl.className = `font-mono text-sm font-bold ${remaining < 0 ? 'text-rose-400' : 'text-emerald-400'}`;
-
-      const tbody = document.getElementById('expenseTableBody');
-      if (proj.expenses.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="3" class="py-4 text-center text-slate-500">No expenses recorded yet.</td></tr>`;
-        return;
-      }
-      tbody.innerHTML = proj.expenses.map(e => `
-        <tr class="hover:bg-slate-800/30 transition">
-          <td class="py-2 px-3 text-slate-200">${e.name}</td>
-          <td class="py-2 px-3 font-mono text-amber-300 font-medium">$${Number(e.amount).toLocaleString()}</td>
-          <td class="py-2 px-3 text-right"><button onclick="deleteExpense('${e.id}')" class="text-slate-500 hover:text-rose-400 p-1"><i class="fa-solid fa-trash-can text-xs"></i></button></td>
-        </tr>
+      document.getElementById('budget-spent-view').innerText = `$${spent.toLocaleString()}`;
+      document.getElementById('budget-remaining-view').innerText = `$${(allocated - spent).toLocaleString()}`;
+      document.getElementById('expenseTableBody').innerHTML = (p.expenses || []).map(e => `
+        <tr class="text-xs hover:bg-slate-800/20"><td class="py-2 px-3 text-slate-300">${e.name}</td><td class="py-2 px-3 font-mono text-amber-300">$${e.amount}</td><td class="py-2 px-3 text-right"><button onclick="deleteExpense('${e.id}')" class="text-slate-500 hover:text-rose-400"><i class="fa-solid fa-trash-can"></i></button></td></tr>
       `).join('');
     }
 
     function switchProject(id) { activeProjectId = id; render(); }
     function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
     function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
-
     function switchTab(tabId) {
       ['charter', 'chapters', 'tasks', 'gantt', 'risks', 'issues', 'budget'].forEach(t => {
         document.getElementById(`view-${t}`).classList.add('hidden');
@@ -1388,10 +1184,8 @@
         document.getElementById(`tab-${t}`).classList.add('text-slate-400');
       });
       document.getElementById(`view-${tabId}`).classList.remove('hidden');
-      const activeBtn = document.getElementById(`tab-${tabId}`);
-      activeBtn.classList.add('bg-indigo-600', 'text-white');
-      activeBtn.classList.remove('text-slate-400');
-      
+      document.getElementById(`tab-${tabId}`).classList.add('bg-indigo-600', 'text-white');
+      document.getElementById(`tab-${tabId}`).classList.remove('text-slate-400');
       if (tabId === 'charter') renderCharter();
       if (tabId === 'chapters') renderChapters();
       if (tabId === 'gantt') renderGantt();
@@ -1399,13 +1193,12 @@
       if (tabId === 'issues') renderIssues();
     }
 
-    // --- MASTER RENDER ---
     function render() {
       if (!currentUser) return;
       const permitted = getPermittedProjects();
       const proj = getActiveProject();
-
       const select = document.getElementById('projectSelect');
+
       if (permitted.length === 0) {
         select.innerHTML = '<option value="">No Projects Assigned</option>';
       } else {
@@ -1414,7 +1207,7 @@
 
       if (proj) {
         const isOwner = proj.owner && proj.owner.toLowerCase() === currentUser.email.toLowerCase();
-        document.getElementById('roleBadge').innerText = isOwner ? 'Project Owner' : 'Collaborator (Read/Write)';
+        document.getElementById('roleBadge').innerText = isOwner ? 'Project Owner' : 'Collaborator';
         document.getElementById('roleBadge').className = isOwner ? 'text-[10px] text-emerald-400 font-mono' : 'text-[10px] text-amber-400 font-mono';
 
         renderCharter();
