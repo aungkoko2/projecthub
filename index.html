@@ -6,7 +6,9 @@
   <title>ProjectHub - Enterprise Edition</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <link rel="icon" type="image/png" href="https://fonts.gstatic.com/s/i/materialicons/view_quilt/v6/24px.svg" />
+  
+  <!-- Modern Colored Favicon (Gradient Cubes Icon) -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Cdefs%3E%3ClinearGradient id='grad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%236366f1'/%3E%3Cstop offset='50%25' stop-color='%23a855f7'/%3E%3Cstop offset='100%25' stop-color='%23ec4899'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath fill='url(%23grad)' d='M239.1 6.3l-208 78c-18.7 7-31.1 25-31.1 45.2c0 11.2 3.8 22.1 10.7 30.7l224 280c10.3 12.9 29.4 13.9 41.1 2.2l224-224c10.8-10.8 13.5-26.9 6.7-40.4s-21.8-22.1-37.1-22.1H325.2l-64-80c-6.8-8.5-17.1-13.5-28.1-13.8z'/%3E%3C/svg%3E" />
 
   <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -51,7 +53,7 @@
       </div>
       <h2 class="text-lg font-bold text-slate-100">Pending Admin Approval</h2>
       <p class="text-xs text-slate-400 leading-relaxed">
-        သင့်အကောင့်ကို စာရင်းသွင်းပြီးပါပြီ။ သို့သော် လုံခြုံရေးအရ Workspace ထဲသို့ ဝင်ရောက်ရန် <strong class="text-indigo-400">Admin ၏ အတည်ပြုချက်</strong> လိုအပ်ပါသည်။
+        သင့်အကောင့်ကို စာရင်းသွင်းပြီးပါပြီ။ သို့သော် လုံခြုံရေးအရ Workspace ထဲသို့ ဝင်ရောက်ရန် <strong class="text-indigo-400">Admin (aungkoko.business@gmail.com) ၏ အတည်ပြုချက်</strong> လိုအပ်ပါသည်။
       </p>
       <div class="pt-2 border-t border-slate-800">
         <button onclick="handleSignOut()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-lg text-xs font-semibold transition">
@@ -101,7 +103,7 @@
           <div id="userEmailBadge" class="text-xs font-semibold text-slate-200">user@example.com</div>
           <div id="roleBadge" class="text-[10px] text-indigo-400 font-mono">Owner</div>
         </div>
-        <button onclick="handleSignOut()" title="Sign Out" class="bg-slate-800 hover:bg-rose-950/40 text-rose-400 border border-slate-700 p-2 rounded-lg text-xs transition">
+        <button onclick="handleSignOut()" title="Sign Out" class="bg-slate-800 hover:bg-rose-950/40 hover:text-rose-400 border border-slate-700 p-2 rounded-lg text-xs transition">
           <i class="fa-solid fa-arrow-right-from-bracket"></i>
         </button>
       </div>
@@ -382,7 +384,7 @@
     </div>
   </div>
 
-  <!-- RISK MODAL -->
+  <!-- RISK MODAL (WITH EDIT SUPPORT) -->
   <div id="riskModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
     <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 w-full max-w-md shadow-2xl text-xs space-y-3">
       <h3 class="text-base font-bold text-amber-400" id="riskModalTitleText">Log Risk</h3>
@@ -411,7 +413,7 @@
     </div>
   </div>
 
-  <!-- ISSUE MODAL -->
+  <!-- ISSUE MODAL (WITH EDIT SUPPORT) -->
   <div id="issueModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
     <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 w-full max-w-md shadow-2xl text-xs space-y-3">
       <h3 class="text-base font-bold text-rose-400" id="issueModalTitleText">Log Issue</h3>
@@ -479,8 +481,7 @@
     const dbRef = db.ref("project_hub_global_db");
     const usersRef = db.ref("project_hub_users");
 
-    // Obfuscated Admin Email (Base64 Encoded for View Source protection)
-    const ADMIN_EMAIL = atob("YXVuZ2tvtv5idXNpbmVzc0BnbWFpbC5jb20=").replace('tv', '.'); // decodes to aungkoko.business@gmail.com
+    const ADMIN_EMAIL = "aungkoko.business@gmail.com";
 
     let currentUser = null;
     let authMode = 'login';
